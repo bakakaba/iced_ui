@@ -64,7 +64,6 @@ invocations; consult the justfile for the exact commands.
 
 ## Conventions
 
-- Rust edition **2024**, resolver **3**.
-- Member crates inherit `version` and `edition` from the workspace.
+- Member crates inherit `license`, `repository`, `version` and `edition` from the workspace.
 - Public API items in `iced_ui` should be documented; run
   `cargo doc -p iced_ui` locally when adding public surface.
