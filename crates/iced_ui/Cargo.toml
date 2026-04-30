@@ -2,5 +2,9 @@
 name = "iced_ui"
 version.workspace = true
 edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "A widget library built on top of iced-rs."
 
 [dependencies]
+iced = { version = "0.14", features = ["advanced"] }

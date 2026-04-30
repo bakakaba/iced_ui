@@ -2,5 +2,8 @@
 name = "demo"
 version.workspace = true
 edition.workspace = true
+publish = false
 
 [dependencies]
+iced = { version = "0.14", features = ["advanced"] }
+iced_ui = { path = "../iced_ui" }
