@@ -1,0 +1,18 @@
+name: Setup Rust & iced deps
+description: Install Linux deps for iced, set up Rust toolchain, and restore cargo cache.
+
+runs:
+  using: composite
+  steps:
+    - name: Install Linux deps for iced
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libxkbcommon-dev libfontconfig1-dev
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        components: rustfmt, clippy
+
+    - uses: Swatinem/rust-cache@v2
