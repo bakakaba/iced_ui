@@ -14,10 +14,10 @@ env:
 
 jobs:
   lint:
-    name: Lint (fmt + clippy)
+    name: Lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: ./.github/actions/setup
       - name: cargo fmt
         run: cargo fmt --all -- --check
@@ -28,7 +28,7 @@ jobs:
     name: Test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: ./.github/actions/setup
       - name: cargo test
         run: cargo test --workspace
@@ -37,7 +37,7 @@ jobs:
     name: Publish (dry-run)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: ./.github/actions/setup
       - name: cargo publish --dry-run
         run: cargo publish -p iced_ui --dry-run
