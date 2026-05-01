@@ -8,4 +8,7 @@ description = "A widget library built on top of iced-rs."
 readme = "../../README.md"
 
 [dependencies]
-iced = { version = "0.14", features = ["advanced"] }
+iced = { version = "0.14", features = ["advanced", "image", "svg"] }
+resvg = "0.45"
+usvg = "0.45"
+tiny-skia = "0.11"
