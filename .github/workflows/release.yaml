@@ -42,3 +42,56 @@ jobs:
       - uses: ./.github/actions/setup
       - name: cargo publish
         run: cargo publish -p iced_ui --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
+
+  build-demo:
+    name: Build demo (${{ matrix.target }})
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            bin: demo
+            asset: demo-x86_64-unknown-linux-gnu
+          - target: aarch64-apple-darwin
+            os: macos-latest
+            bin: demo
+            asset: demo-aarch64-apple-darwin
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            bin: demo.exe
+            asset: demo-x86_64-pc-windows-msvc.exe
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.release-please.outputs.tag_name }}
+
+      - name: Install Linux deps for iced
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxkbcommon-dev libfontconfig1-dev
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: demo-${{ matrix.target }}
+
+      - name: Build demo
+        run: cargo build -p demo --release --target ${{ matrix.target }}
+
+      - name: Rename binary
+        shell: bash
+        run: mv "target/${{ matrix.target }}/release/${{ matrix.bin }}" "${{ matrix.asset }}"
+
+      - name: Upload to release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: gh release upload "${{ needs.release-please.outputs.tag_name }}" "${{ matrix.asset }}" --clobber

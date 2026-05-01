@@ -2,14 +2,17 @@
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
   "release-type": "rust",
   "bump-minor-pre-major": true,
+  "bump-patch-for-minor-pre-major": true,
   "plugins": ["cargo-workspace"],
   "packages": {
     "crates/iced_ui": {
-      "package-name": "iced_ui"
+      "package-name": "iced_ui",
+      "release-as": "0.1.0"
     },
     "crates/demo": {
       "package-name": "demo",
-      "skip-github-release": true
+      "skip-github-release": true,
+      "release-as": "0.1.0"
     }
   }
 }
