@@ -6,13 +6,11 @@
   "plugins": ["cargo-workspace"],
   "packages": {
     "crates/iced_ui": {
-      "package-name": "iced_ui",
-      "release-as": "0.1.0"
+      "package-name": "iced_ui"
     },
     "crates/demo": {
       "package-name": "demo",
-      "skip-github-release": true,
-      "release-as": "0.1.0"
+      "skip-github-release": true
     }
   }
 }
