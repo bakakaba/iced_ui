@@ -6,10 +6,16 @@
 //!   shortcuts, separators and nested submenus.
 //! - [`iced_ui::Card`]: a rounded-corner container with flat and
 //!   elevated variants and optional color / image backgrounds.
+//!
+//! The right-hand pane exposes live theme settings: pick any built-in
+//! [`iced::Theme`], or enable "Customize palette" to drive a
+//! [`iced::theme::Palette`] with RGB sliders. Every change is reflected
+//! immediately across the menu bar, cards and the settings pane itself.
 
 use iced::advanced::image as advanced_image;
 use iced::advanced::svg as advanced_svg;
-use iced::widget::{Space, column, container, row, text};
+use iced::theme::Palette;
+use iced::widget::{Space, checkbox, column, container, pick_list, row, scrollable, slider, text};
 use iced::{Color, Element, Fill, Length, Subscription, Task, Theme};
 
 use iced_ui::Card;
@@ -19,14 +25,120 @@ pub fn main() -> iced::Result {
     iced::application(Demo::default, Demo::update, Demo::view)
         .title("iced_ui demo")
         .subscription(Demo::subscription)
-        .theme(Theme::Dark)
+        .theme(Demo::theme)
         .run()
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 struct Demo {
     counter: u32,
     last_action: Option<String>,
+    selected_theme: Theme,
+    sidebar_visible: bool,
+    customize_palette: bool,
+    custom_palette: Palette,
+}
+
+impl Default for Demo {
+    fn default() -> Self {
+        let selected_theme = Theme::Dark;
+        let custom_palette = selected_theme.palette();
+        Self {
+            counter: 0,
+            last_action: None,
+            selected_theme,
+            sidebar_visible: true,
+            customize_palette: false,
+            custom_palette,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+enum PaletteField {
+    Background,
+    Text,
+    Primary,
+    Success,
+    Warning,
+    Danger,
+}
+
+impl PaletteField {
+    const ALL: [Self; 6] = [
+        Self::Background,
+        Self::Text,
+        Self::Primary,
+        Self::Success,
+        Self::Warning,
+        Self::Danger,
+    ];
+
+    fn label(self) -> &'static str {
+        match self {
+            Self::Background => "Background",
+            Self::Text => "Text",
+            Self::Primary => "Primary",
+            Self::Success => "Success",
+            Self::Warning => "Warning",
+            Self::Danger => "Danger",
+        }
+    }
+
+    fn get(self, palette: &Palette) -> Color {
+        match self {
+            Self::Background => palette.background,
+            Self::Text => palette.text,
+            Self::Primary => palette.primary,
+            Self::Success => palette.success,
+            Self::Warning => palette.warning,
+            Self::Danger => palette.danger,
+        }
+    }
+
+    fn set(self, palette: &mut Palette, color: Color) {
+        match self {
+            Self::Background => palette.background = color,
+            Self::Text => palette.text = color,
+            Self::Primary => palette.primary = color,
+            Self::Success => palette.success = color,
+            Self::Warning => palette.warning = color,
+            Self::Danger => palette.danger = color,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+enum Channel {
+    R,
+    G,
+    B,
+}
+
+impl Channel {
+    fn label(self) -> &'static str {
+        match self {
+            Self::R => "R",
+            Self::G => "G",
+            Self::B => "B",
+        }
+    }
+
+    fn get(self, color: Color) -> f32 {
+        match self {
+            Self::R => color.r,
+            Self::G => color.g,
+            Self::B => color.b,
+        }
+    }
+
+    fn set(self, color: &mut Color, value: f32) {
+        match self {
+            Self::R => color.r = value,
+            Self::G => color.g = value,
+            Self::B => color.b = value,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
@@ -55,6 +167,13 @@ enum Action {
 #[derive(Debug, Clone)]
 enum Message {
     Triggered(Action),
+    ThemeSelected(Theme),
+    CustomizeToggled(bool),
+    PaletteChannelChanged {
+        field: PaletteField,
+        channel: Channel,
+        value: f32,
+    },
 }
 
 impl Demo {
@@ -63,9 +182,46 @@ impl Demo {
             Message::Triggered(action) => {
                 self.counter = self.counter.saturating_add(1);
                 self.last_action = Some(format!("{action:?}"));
+                if matches!(action, Action::ToggleSidebar) {
+                    self.sidebar_visible = !self.sidebar_visible;
+                }
+            }
+            Message::ThemeSelected(theme) => {
+                // Seed the custom palette from the freshly selected
+                // built-in so toggling "Customize palette" later starts
+                // from a familiar place.
+                self.custom_palette = theme.palette();
+                self.selected_theme = theme;
+            }
+            Message::CustomizeToggled(enabled) => {
+                if enabled {
+                    self.custom_palette = self.selected_theme.palette();
+                }
+                self.customize_palette = enabled;
+            }
+            Message::PaletteChannelChanged {
+                field,
+                channel,
+                value,
+            } => {
+                let mut color = field.get(&self.custom_palette);
+                channel.set(&mut color, value);
+                field.set(&mut self.custom_palette, color);
             }
         }
         Task::none()
+    }
+
+    fn theme(&self) -> Theme {
+        self.active_theme()
+    }
+
+    fn active_theme(&self) -> Theme {
+        if self.customize_palette {
+            Theme::custom("Custom".to_string(), self.custom_palette)
+        } else {
+            self.selected_theme.clone()
+        }
     }
 
     fn view(&self) -> Element<'_, Message> {
@@ -87,7 +243,7 @@ impl Demo {
         ]
         .spacing(8);
 
-        let body = container(
+        let body = container(scrollable(
             column![
                 text("iced_ui kitchen sink").size(28),
                 menu_section,
@@ -96,11 +252,17 @@ impl Demo {
             ]
             .spacing(16)
             .padding(20),
-        )
+        ))
         .width(Fill)
         .height(Fill);
 
-        column![menu_bar, body].width(Fill).height(Fill).into()
+        let main_row: Element<'_, Message> = if self.sidebar_visible {
+            row![body, build_settings_pane(self)].height(Fill).into()
+        } else {
+            body.into()
+        };
+
+        column![menu_bar, main_row].width(Fill).height(Fill).into()
     }
 
     fn subscription(&self) -> Subscription<Message> {
@@ -115,6 +277,85 @@ fn build_menu_bar<'a>() -> MenuBar<'a, Message> {
         .push(edit_menu())
         .push(view_menu())
         .push(help_menu())
+}
+
+fn build_settings_pane(demo: &Demo) -> Element<'_, Message> {
+    let theme_picker = pick_list(
+        Theme::ALL,
+        Some(demo.selected_theme.clone()),
+        Message::ThemeSelected,
+    )
+    .width(Length::Fill);
+
+    let mut content = column![
+        text("Theme settings").size(18),
+        column![text("Built-in theme").size(14), theme_picker].spacing(6),
+        checkbox(demo.customize_palette)
+            .label("Customize palette")
+            .on_toggle(Message::CustomizeToggled),
+    ]
+    .spacing(14);
+
+    if demo.customize_palette {
+        let mut editor = column![text("Palette").size(16)].spacing(12);
+        for field in PaletteField::ALL {
+            editor = editor.push(palette_field_row(field, demo.custom_palette));
+        }
+        content = content.push(editor);
+    }
+
+    let pane = Card::new(scrollable(content.padding(4)))
+        .width(Length::Fixed(280.0))
+        .height(Length::Fill)
+        .padding(16)
+        .elevated();
+
+    container(pane).padding(12).into()
+}
+
+fn palette_field_row<'a>(field: PaletteField, palette: Palette) -> Element<'a, Message> {
+    let color = field.get(&palette);
+
+    let swatch = container(Space::new())
+        .width(Length::Fixed(20.0))
+        .height(Length::Fixed(20.0))
+        .style(move |_theme| container::Style {
+            background: Some(iced::Background::Color(color)),
+            border: iced::Border {
+                color: Color::from_rgba(0.0, 0.0, 0.0, 0.4),
+                width: 1.0,
+                radius: 4.0.into(),
+            },
+            ..container::Style::default()
+        });
+
+    let header = row![
+        text(field.label()).size(14),
+        Space::new().width(Fill),
+        swatch
+    ]
+    .align_y(iced::Alignment::Center)
+    .spacing(8);
+
+    let mut group = column![header].spacing(4);
+    for channel in [Channel::R, Channel::G, Channel::B] {
+        let value = channel.get(color);
+        let label = format!("{} {:.2}", channel.label(), value);
+        group = group.push(
+            row![
+                text(label).size(12).width(Length::Fixed(48.0)),
+                slider(0.0..=1.0, value, move |v| Message::PaletteChannelChanged {
+                    field,
+                    channel,
+                    value: v,
+                })
+                .step(0.01_f32),
+            ]
+            .align_y(iced::Alignment::Center)
+            .spacing(8),
+        );
+    }
+    group.into()
 }
 
 fn build_card_showcase<'a>() -> Element<'a, Message> {
