@@ -82,7 +82,7 @@ impl<P: Paragraph> State<P> {
 ///
 /// See the [module-level docs](crate::menu) for an overview, and
 /// [`MenuBar::shortcuts`] for how to wire up keyboard shortcuts.
-pub struct MenuBar<'a, Message, Theme = iced::Theme, Renderer = iced::Renderer>
+pub struct MenuBar<'a, Message, Theme = crate::Theme, Renderer = iced::Renderer>
 where
     Theme: Catalog,
     Renderer: text::Renderer<Font = Font>,
@@ -153,15 +153,15 @@ where
     }
 }
 
-impl<'a, Message, Renderer> MenuBar<'a, Message, iced::Theme, Renderer>
+impl<'a, Message, Renderer> MenuBar<'a, Message, crate::Theme, Renderer>
 where
     Message: Clone,
     Renderer: text::Renderer<Font = Font>,
 {
     /// Sets the style of the bar using a `Fn(&Theme) -> Style` closure.
     ///
-    /// This is available when `Theme = iced::Theme`.
-    pub fn style(mut self, style: impl Fn(&iced::Theme) -> Style + 'a) -> Self {
+    /// This is available when `Theme = `[`crate::Theme`].
+    pub fn style(mut self, style: impl Fn(&crate::Theme) -> Style + 'a) -> Self {
         self.class = Box::new(style);
         self
     }
@@ -333,7 +333,7 @@ where
                     renderer::Quad {
                         bounds: label_bounds,
                         border: Border {
-                            radius: 3.0.into(),
+                            radius: style.item_radius.into(),
                             width: 0.0,
                             color: Color::TRANSPARENT,
                         },

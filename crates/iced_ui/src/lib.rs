@@ -14,8 +14,10 @@
 
 pub mod card;
 pub mod menu;
+pub mod theme;
 
 pub use card::{Card, Variant};
 pub use menu::{
     Catalog, Icon, Item, KeyBinding, Menu, MenuBar, Separator, Style, StyleFn, default, shortcuts,
 };
+pub use theme::Theme;

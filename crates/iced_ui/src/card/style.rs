@@ -1,13 +1,16 @@
 //! Styling primitives for the [`Card`](crate::card::Card) widget.
 //!
-//! The card's rounded corners are driven entirely by
-//! [`Style::border`]'s [`Radius`], which acts as the theme-level
-//! "roundness" for the widget. Override a card's [`Style`] to change
-//! the roundness, colors, border or shadow.
+//! The card's rounded corners are driven by [`Style::border`]'s
+//! [`Radius`], which the default catalog derives from
+//! [`Theme::roundness`](crate::Theme::roundness). Override a card's
+//! [`Style`] to change the roundness, colors, border or shadow on a
+//! per-widget basis.
 //!
 //! [`Radius`]: iced::border::Radius
 
-use iced::{Background, Border, Color, Shadow, Theme};
+use iced::{Background, Border, Color, Shadow};
+
+use crate::Theme;
 
 /// The visual variants of a [`Card`](crate::card::Card).
 ///
@@ -56,8 +59,8 @@ pub type StyleFn<'a, Theme> = Box<dyn Fn(&Theme, Variant) -> Style + 'a>;
 /// A catalog of theme-driven [`Style`]s for the card.
 ///
 /// The default class — [`Catalog::default`] — uses [`default`] to
-/// derive a [`Style`] from the theme's extended palette for each
-/// [`Variant`].
+/// derive a [`Style`] from the theme's extended palette and roundness
+/// for each [`Variant`].
 pub trait Catalog {
     /// The identifier of a particular style.
     type Class<'a>;
@@ -98,7 +101,7 @@ pub fn flat(theme: &Theme) -> Style {
     Style {
         background: Some(palette.background.base.color.into()),
         border: Border {
-            radius: 8.0.into(),
+            radius: theme.roundness.into(),
             width: 1.0,
             color: palette.background.strong.color,
         },
@@ -115,7 +118,7 @@ pub fn elevated(theme: &Theme) -> Style {
     Style {
         background: Some(palette.background.base.color.into()),
         border: Border {
-            radius: 8.0.into(),
+            radius: theme.roundness.into(),
             width: 0.0,
             color: Color::TRANSPARENT,
         },

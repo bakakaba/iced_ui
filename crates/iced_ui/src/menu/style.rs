@@ -1,6 +1,8 @@
 //! Styling primitives for the [`MenuBar`](crate::menu::MenuBar).
 
-use iced::{Background, Border, Color, Shadow, Theme};
+use iced::{Background, Border, Color, Shadow};
+
+use crate::Theme;
 
 /// The visual style of a [`MenuBar`](crate::menu::MenuBar) in a single
 /// state.
@@ -18,6 +20,10 @@ pub struct Style {
     /// Text color applied to a top-level label when it is hovered or
     /// when its dropdown is open.
     pub bar_text_active: Color,
+    /// Border radius applied to hover/active highlight backgrounds
+    /// (both the top-level bar items and the rows inside dropdown
+    /// popups), in logical pixels.
+    pub item_radius: f32,
 
     /// Background of an open dropdown / submenu popup.
     pub menu_background: Background,
@@ -38,6 +44,15 @@ pub struct Style {
     pub shortcut_text: Color,
     /// Color of a separator line between items.
     pub separator_color: Color,
+    /// Glyph drawn in the icon column of a [checked
+    /// item](crate::menu::Item::checked).
+    pub check_glyph: char,
+    /// Color of the [`check_glyph`](Self::check_glyph) when the
+    /// containing row is in its idle state. Hovered and disabled rows
+    /// fall back to [`item_text_hovered`](Self::item_text_hovered) and
+    /// [`item_text_disabled`](Self::item_text_disabled) respectively
+    /// so the glyph stays consistent with the rest of the row.
+    pub check_color: Color,
 
     /// General spacing used by the menu, in logical pixels.
     ///
@@ -57,8 +72,8 @@ pub type StyleFn<'a, Theme> = Box<dyn Fn(&Theme) -> Style + 'a>;
 /// A catalog of theme-driven [`Style`]s for the menu bar.
 ///
 /// The default class — [`Catalog::default`] — uses [`default`] to derive
-/// a [`Style`] from the theme's extended palette, matching the look of
-/// the built-in iced widgets.
+/// a [`Style`] from the theme's extended palette, roundness and
+/// spacing.
 pub trait Catalog {
     /// The identifier of a particular style.
     type Class<'a>;
@@ -96,10 +111,11 @@ pub fn default(theme: &Theme) -> Style {
         bar_text: palette.background.weak.text,
         bar_item_background_active: palette.primary.base.color.into(),
         bar_text_active: palette.primary.base.text,
+        item_radius: theme.roundness,
 
         menu_background: palette.background.base.color.into(),
         menu_border: Border {
-            radius: 4.0.into(),
+            radius: theme.roundness.into(),
             width: 1.0,
             color: palette.background.strong.color,
         },
@@ -118,7 +134,9 @@ pub fn default(theme: &Theme) -> Style {
         item_text_hovered: palette.primary.base.text,
         shortcut_text: palette.background.strong.color,
         separator_color: palette.background.strong.color,
+        check_glyph: '\u{2713}',
+        check_color: palette.primary.base.color,
 
-        spacing: 8.0,
+        spacing: theme.spacing,
     }
 }

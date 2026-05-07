@@ -80,17 +80,17 @@ struct CardState {
 ///
 /// ```no_run
 /// use iced::widget::text;
-/// use iced_ui::Card;
+/// use iced_ui::{Card, Theme};
 ///
 /// # type Message = ();
-/// # fn _build() -> iced::Element<'static, Message> {
+/// # fn _build() -> iced::Element<'static, Message, Theme> {
 /// Card::new(text("Hello!"))
 ///     .padding(16)
 ///     .elevated()
 ///     .into()
 /// # }
 /// ```
-pub struct Card<'a, Message, Theme = iced::Theme, Renderer = iced::Renderer>
+pub struct Card<'a, Message, Theme = crate::Theme, Renderer = iced::Renderer>
 where
     Theme: Catalog,
     Renderer: renderer::Renderer
@@ -216,7 +216,7 @@ where
     }
 }
 
-impl<'a, Message, Renderer> Card<'a, Message, iced::Theme, Renderer>
+impl<'a, Message, Renderer> Card<'a, Message, crate::Theme, Renderer>
 where
     Renderer: renderer::Renderer
         + advanced_image::Renderer<Handle = advanced_image::Handle>
@@ -225,8 +225,8 @@ where
     /// Sets the style of the [`Card`] using a
     /// `Fn(&Theme, Variant) -> Style` closure.
     ///
-    /// This is available when `Theme = iced::Theme`.
-    pub fn style(mut self, style: impl Fn(&iced::Theme, Variant) -> Style + 'a) -> Self {
+    /// This is available when `Theme = `[`crate::Theme`].
+    pub fn style(mut self, style: impl Fn(&crate::Theme, Variant) -> Style + 'a) -> Self {
         self.class = Box::new(style);
         self
     }

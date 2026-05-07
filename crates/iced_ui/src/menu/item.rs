@@ -85,6 +85,7 @@ pub struct Item<Message> {
     pub(super) shortcut: Option<KeyBinding>,
     pub(super) on_press: Option<Message>,
     pub(super) enabled: bool,
+    pub(super) checked: bool,
 }
 
 impl<Message> Item<Message> {
@@ -97,6 +98,7 @@ impl<Message> Item<Message> {
             shortcut: None,
             on_press: None,
             enabled: true,
+            checked: false,
         }
     }
 
@@ -130,6 +132,18 @@ impl<Message> Item<Message> {
     /// their shortcut.
     pub fn enabled(mut self, enabled: bool) -> Self {
         self.enabled = enabled;
+        self
+    }
+
+    /// Marks this item as checked, drawing a check glyph in the
+    /// leading icon column. Useful for toggleable items so the menu
+    /// communicates the current state.
+    ///
+    /// When an item has both a [custom icon](Self::icon) and is
+    /// checked, the check glyph takes precedence over the icon for
+    /// the duration the item is checked.
+    pub fn checked(mut self, checked: bool) -> Self {
+        self.checked = checked;
         self
     }
 

@@ -7,19 +7,25 @@
 //! - [`iced_ui::Card`]: a rounded-corner container with flat and
 //!   elevated variants and optional color / image backgrounds.
 //!
-//! The right-hand pane exposes live theme settings: pick any built-in
-//! [`iced::Theme`], or enable "Customize palette" to drive a
-//! [`iced::theme::Palette`] with RGB sliders. Every change is reflected
-//! immediately across the menu bar, cards and the settings pane itself.
+//! The right-hand pane drives a live [`iced_ui::Theme`]: pick any
+//! built-in [`iced::Theme`] for the colors, optionally customize the
+//! palette per channel, and tweak the global roundness and spacing.
+//! Every change is reflected immediately across cards, the menu bar,
+//! and the settings pane itself.
 
 use iced::advanced::image as advanced_image;
 use iced::advanced::svg as advanced_svg;
 use iced::theme::Palette;
 use iced::widget::{Space, checkbox, column, container, pick_list, row, scrollable, slider, text};
-use iced::{Color, Element, Fill, Length, Subscription, Task, Theme};
+use iced::{Color, Length, Subscription, Task};
 
 use iced_ui::Card;
+use iced_ui::Theme;
 use iced_ui::menu::{Icon, Item, KeyBinding, Menu, MenuBar, Separator};
+
+/// Convenience alias: every widget in the demo's tree is themed by
+/// `iced_ui::Theme`.
+type Element<'a, Message> = iced::Element<'a, Message, Theme>;
 
 pub fn main() -> iced::Result {
     iced::application(Demo::default, Demo::update, Demo::view)
@@ -33,20 +39,29 @@ pub fn main() -> iced::Result {
 struct Demo {
     counter: u32,
     last_action: Option<String>,
-    selected_theme: Theme,
+    /// The active `iced_ui::Theme`. Drives every widget in the tree.
+    theme: Theme,
+    /// Which built-in iced theme is currently selected in the dropdown.
+    /// Kept separate so that toggling "Customize palette" off restores
+    /// the user's last built-in choice.
+    selected_iced: iced::Theme,
     sidebar_visible: bool,
     customize_palette: bool,
+    /// The palette currently driven by the per-channel sliders. Used
+    /// to build a [`iced::Theme::custom`] when `customize_palette` is
+    /// `true`.
     custom_palette: Palette,
 }
 
 impl Default for Demo {
     fn default() -> Self {
-        let selected_theme = Theme::Dark;
-        let custom_palette = selected_theme.palette();
+        let selected_iced = iced::Theme::Dark;
+        let custom_palette = selected_iced.palette();
         Self {
             counter: 0,
             last_action: None,
-            selected_theme,
+            theme: Theme::from(selected_iced.clone()),
+            selected_iced,
             sidebar_visible: true,
             customize_palette: false,
             custom_palette,
@@ -167,13 +182,15 @@ enum Action {
 #[derive(Debug, Clone)]
 enum Message {
     Triggered(Action),
-    ThemeSelected(Theme),
+    ThemeSelected(iced::Theme),
     CustomizeToggled(bool),
     PaletteChannelChanged {
         field: PaletteField,
         channel: Channel,
         value: f32,
     },
+    RoundnessChanged(f32),
+    SpacingChanged(f32),
 }
 
 impl Demo {
@@ -186,18 +203,20 @@ impl Demo {
                     self.sidebar_visible = !self.sidebar_visible;
                 }
             }
-            Message::ThemeSelected(theme) => {
+            Message::ThemeSelected(iced_theme) => {
                 // Seed the custom palette from the freshly selected
                 // built-in so toggling "Customize palette" later starts
                 // from a familiar place.
-                self.custom_palette = theme.palette();
-                self.selected_theme = theme;
+                self.custom_palette = iced_theme.palette();
+                self.selected_iced = iced_theme;
+                self.refresh_colors();
             }
             Message::CustomizeToggled(enabled) => {
                 if enabled {
-                    self.custom_palette = self.selected_theme.palette();
+                    self.custom_palette = self.selected_iced.palette();
                 }
                 self.customize_palette = enabled;
+                self.refresh_colors();
             }
             Message::PaletteChannelChanged {
                 field,
@@ -207,25 +226,36 @@ impl Demo {
                 let mut color = field.get(&self.custom_palette);
                 channel.set(&mut color, value);
                 field.set(&mut self.custom_palette, color);
+                if self.customize_palette {
+                    self.refresh_colors();
+                }
+            }
+            Message::RoundnessChanged(value) => {
+                self.theme.roundness = value;
+            }
+            Message::SpacingChanged(value) => {
+                self.theme.spacing = value;
             }
         }
         Task::none()
     }
 
-    fn theme(&self) -> Theme {
-        self.active_theme()
+    /// Recomputes [`Theme::colors`] from the dropdown selection and the
+    /// "Customize palette" toggle. Roundness and spacing are preserved.
+    fn refresh_colors(&mut self) {
+        self.theme.colors = if self.customize_palette {
+            iced::Theme::custom("Custom".to_string(), self.custom_palette)
+        } else {
+            self.selected_iced.clone()
+        };
     }
 
-    fn active_theme(&self) -> Theme {
-        if self.customize_palette {
-            Theme::custom("Custom".to_string(), self.custom_palette)
-        } else {
-            self.selected_theme.clone()
-        }
+    fn theme(&self) -> Theme {
+        self.theme.clone()
     }
 
     fn view(&self) -> Element<'_, Message> {
-        let menu_bar = build_menu_bar();
+        let menu_bar = build_menu_bar(self.sidebar_visible);
 
         let status = match &self.last_action {
             Some(last) => format!("Last action: {last} (count: {})", self.counter),
@@ -253,43 +283,48 @@ impl Demo {
             .spacing(16)
             .padding(20),
         ))
-        .width(Fill)
-        .height(Fill);
+        .width(Length::Fill)
+        .height(Length::Fill);
 
         let main_row: Element<'_, Message> = if self.sidebar_visible {
-            row![body, build_settings_pane(self)].height(Fill).into()
+            row![body, build_settings_pane(self)]
+                .height(Length::Fill)
+                .into()
         } else {
             body.into()
         };
 
-        column![menu_bar, main_row].width(Fill).height(Fill).into()
+        column![menu_bar, main_row]
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .into()
     }
 
     fn subscription(&self) -> Subscription<Message> {
-        iced_ui::shortcuts(build_menu_bar().shortcuts())
+        iced_ui::shortcuts(build_menu_bar(self.sidebar_visible).shortcuts())
     }
 }
 
-fn build_menu_bar<'a>() -> MenuBar<'a, Message> {
+fn build_menu_bar<'a>(sidebar_visible: bool) -> MenuBar<'a, Message> {
     MenuBar::new()
         .width(Length::Fill)
         .push(file_menu())
         .push(edit_menu())
-        .push(view_menu())
+        .push(view_menu(sidebar_visible))
         .push(help_menu())
 }
 
 fn build_settings_pane(demo: &Demo) -> Element<'_, Message> {
     let theme_picker = pick_list(
-        Theme::ALL,
-        Some(demo.selected_theme.clone()),
+        iced::Theme::ALL,
+        Some(demo.selected_iced.clone()),
         Message::ThemeSelected,
     )
     .width(Length::Fill);
 
     let mut content = column![
         text("Theme settings").size(18),
-        column![text("Built-in theme").size(14), theme_picker].spacing(6),
+        column![text("Colors (built-in)").size(14), theme_picker].spacing(6),
         checkbox(demo.customize_palette)
             .label("Customize palette")
             .on_toggle(Message::CustomizeToggled),
@@ -304,6 +339,19 @@ fn build_settings_pane(demo: &Demo) -> Element<'_, Message> {
         content = content.push(editor);
     }
 
+    content = content.push(scalar_slider(
+        "Roundness",
+        demo.theme.roundness,
+        0.0..=24.0,
+        Message::RoundnessChanged,
+    ));
+    content = content.push(scalar_slider(
+        "Spacing",
+        demo.theme.spacing,
+        0.0..=24.0,
+        Message::SpacingChanged,
+    ));
+
     let pane = Card::new(scrollable(content.padding(4)))
         .width(Length::Fixed(280.0))
         .height(Length::Fill)
@@ -311,6 +359,25 @@ fn build_settings_pane(demo: &Demo) -> Element<'_, Message> {
         .elevated();
 
     container(pane).padding(12).into()
+}
+
+fn scalar_slider<'a>(
+    label: &'a str,
+    value: f32,
+    range: std::ops::RangeInclusive<f32>,
+    on_change: impl Fn(f32) -> Message + 'a,
+) -> Element<'a, Message> {
+    column![
+        row![
+            text(label).size(14),
+            Space::new().width(Length::Fill),
+            text(format!("{value:.1} px")).size(12),
+        ]
+        .align_y(iced::Alignment::Center),
+        slider(range, value, on_change).step(0.5_f32),
+    ]
+    .spacing(4)
+    .into()
 }
 
 fn palette_field_row<'a>(field: PaletteField, palette: Palette) -> Element<'a, Message> {
@@ -331,7 +398,7 @@ fn palette_field_row<'a>(field: PaletteField, palette: Palette) -> Element<'a, M
 
     let header = row![
         text(field.label()).size(14),
-        Space::new().width(Fill),
+        Space::new().width(Length::Fill),
         swatch
     ]
     .align_y(iced::Alignment::Center)
@@ -536,7 +603,7 @@ fn edit_menu() -> Menu<Message> {
         )
 }
 
-fn view_menu() -> Menu<Message> {
+fn view_menu(sidebar_visible: bool) -> Menu<Message> {
     let zoom = Menu::new("Zoom")
         .push(
             Item::new("Zoom In")
@@ -557,7 +624,11 @@ fn view_menu() -> Menu<Message> {
     Menu::new("View")
         .push(zoom)
         .push(Separator)
-        .push(Item::new("Toggle Sidebar").on_press(Message::Triggered(Action::ToggleSidebar)))
+        .push(
+            Item::new("Toggle Sidebar")
+                .checked(sidebar_visible)
+                .on_press(Message::Triggered(Action::ToggleSidebar)),
+        )
         .push(Item::new("Unavailable").enabled(false))
 }
 

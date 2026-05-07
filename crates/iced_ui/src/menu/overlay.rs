@@ -719,7 +719,7 @@ fn draw_menu<Message, Renderer>(
                 renderer::Quad {
                     bounds: row_bounds,
                     border: Border {
-                        radius: 3.0.into(),
+                        radius: style.item_radius.into(),
                         width: 0.0,
                         color: Color::TRANSPARENT,
                     },
@@ -743,7 +743,31 @@ fn draw_menu<Message, Renderer>(
 
                 let label_x = bounds.x + metrics.popup_padding.left + metrics.icon_cell;
 
-                if let Some(icon) = &item.icon {
+                if item.checked {
+                    let check_color = if !item.enabled {
+                        style.item_text_disabled
+                    } else if highlighted {
+                        style.item_text_hovered
+                    } else {
+                        style.check_color
+                    };
+                    renderer.fill_text(
+                        Text {
+                            content: style.check_glyph.to_string(),
+                            bounds: Size::new(metrics.icon_cell, metrics.text_size),
+                            size: Pixels(metrics.text_size),
+                            line_height: text::LineHeight::default(),
+                            font,
+                            align_x: text::Alignment::Default,
+                            align_y: alignment::Vertical::Top,
+                            shaping: text::Shaping::Advanced,
+                            wrapping: text::Wrapping::None,
+                        },
+                        Point::new(bounds.x + metrics.popup_padding.left, text_y),
+                        check_color,
+                        bounds,
+                    );
+                } else if let Some(icon) = &item.icon {
                     let icon_font = icon.font.unwrap_or(font);
                     renderer.fill_text(
                         Text {
