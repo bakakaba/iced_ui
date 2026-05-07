@@ -49,6 +49,11 @@ pub(crate) struct State<P: Paragraph> {
     /// Index of the top-level bar label that is visually "active"
     /// (currently open or pressed).
     pub(crate) bar_active: Option<usize>,
+    /// Index of the top-level bar label currently under the cursor
+    /// (when the bar is closed). Tracked in state so that `draw` can
+    /// render hover deterministically and `update` can request redraws
+    /// only when the hovered label changes.
+    pub(crate) bar_hover: Option<usize>,
     /// Rows of menus that the cursor is currently hovering, per depth.
     /// Length matches `open_path.len()` when open.
     pub(crate) hover_path: Vec<Option<usize>>,
@@ -65,6 +70,7 @@ impl<P: Paragraph> Default for State<P> {
             bar_labels: Vec::new(),
             open_path: None,
             bar_active: None,
+            bar_hover: None,
             hover_path: Vec::new(),
             spacing_cache: Cell::new(8.0),
         }
@@ -281,7 +287,7 @@ where
         theme: &Theme,
         _style: &renderer::Style,
         layout: Layout<'_>,
-        cursor: mouse::Cursor,
+        _cursor: mouse::Cursor,
         viewport: &Rectangle,
     ) {
         let state = tree.state.downcast_ref::<State<Renderer::Paragraph>>();
@@ -301,8 +307,6 @@ where
         let text_size = self.text_size.unwrap_or_else(|| renderer.default_size()).0;
         let font = self.font.unwrap_or_else(|| renderer.default_font());
 
-        let cursor_pos = cursor.position();
-
         let mut x = bounds.x + self.padding.left;
         let last_index = state.bar_labels.len().saturating_sub(1);
         for (i, slot) in state.bar_labels.iter().enumerate() {
@@ -315,9 +319,7 @@ where
             };
 
             let is_active = state.bar_active == Some(i);
-            let is_hovered = cursor_pos
-                .map(|p| label_bounds.contains(p))
-                .unwrap_or(false);
+            let is_hovered = state.bar_hover == Some(i);
 
             let (bg, text_color) = if is_active || is_hovered {
                 (
@@ -386,9 +388,27 @@ where
         let spacing = state.spacing_cache.get();
         let label_bounds = compute_bar_label_bounds(state, bounds, self.padding, spacing);
 
-        let Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) = event else {
-            return;
-        };
+        match event {
+            Event::Mouse(mouse::Event::CursorMoved { .. }) => {
+                let new_hover = cursor
+                    .position()
+                    .and_then(|pos| label_bounds.iter().position(|label| label.contains(pos)));
+                if state.bar_hover != new_hover {
+                    state.bar_hover = new_hover;
+                    shell.request_redraw();
+                }
+                return;
+            }
+            Event::Mouse(mouse::Event::CursorLeft) => {
+                if state.bar_hover.is_some() {
+                    state.bar_hover = None;
+                    shell.request_redraw();
+                }
+                return;
+            }
+            Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) => {}
+            _ => return,
+        }
 
         let Some(pos) = cursor.position() else {
             return;
