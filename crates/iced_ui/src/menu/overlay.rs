@@ -230,8 +230,26 @@ where
         };
 
         let child_layouts: Vec<Layout<'_>> = layout.children().collect();
+        let child_bounds: Vec<Rectangle> = child_layouts.iter().map(|l| l.bounds()).collect();
+
+        // Compute invisible hover-bridge rectangles between the bar and
+        // top-level panel, and between adjacent open panels. These keep
+        // the path stable while the cursor briefly transits the seam
+        // between two open panels (or the gap between the bar and the
+        // dropdown).
+        let bridges = hover_bridges(
+            path.len(),
+            &child_bounds,
+            &self.bar_label_bounds,
+            path[0],
+            self.metrics,
+        );
 
         // Recompute hovered row per depth based on current cursor.
+        // If the cursor is over a panel, hit-test it. Otherwise, if the
+        // cursor is over the bridge associated with that depth, inherit
+        // the previously hovered row at that depth so the highlighted
+        // row remains stable during transit.
         let mut hovered: Vec<Option<usize>> = Vec::with_capacity(path.len());
         let mut current_menu: &Menu<Message> = &self.menus[path[0]];
         for (depth, _) in path.iter().enumerate() {
@@ -239,9 +257,22 @@ where
                 hovered.push(None);
                 break;
             };
-            let row = cursor
-                .position()
-                .and_then(|p| hit_row(current_menu, *child_layout, self.metrics, p));
+            let row = match cursor.position() {
+                Some(p) if child_layout.bounds().contains(p) => {
+                    hit_row(current_menu, *child_layout, self.metrics, p)
+                }
+                Some(p)
+                    if bridges
+                        .get(depth)
+                        .and_then(|b| *b)
+                        .is_some_and(|r| r.contains(p)) =>
+                {
+                    // In the bridge for this depth — preserve the prior
+                    // hovered row so highlighting doesn't flicker.
+                    self.state.hover_path.get(depth).copied().flatten()
+                }
+                _ => None,
+            };
             hovered.push(row);
 
             if let Some(next) = path.get(depth + 1).copied() {
@@ -256,40 +287,38 @@ where
         match event {
             Event::Mouse(mouse::Event::CursorMoved { .. }) => {
                 if let Some(cursor_pos) = cursor.position() {
-                    // Switch top-level menu when hovering another bar label.
-                    for (i, label_bounds) in self.bar_label_bounds.iter().enumerate() {
-                        if label_bounds.contains(cursor_pos) && path[0] != i {
+                    match compute_hover_update(
+                        self.menus,
+                        &path,
+                        &self.state.hover_path,
+                        &child_bounds,
+                        &self.bar_label_bounds,
+                        &bridges,
+                        self.metrics,
+                        cursor_pos,
+                    ) {
+                        HoverUpdate::SwitchTopLevel(i) => {
                             self.state.open_path = Some(vec![i]);
                             self.state.bar_active = Some(i);
                             self.state.hover_path = vec![Some(i)];
                             shell.request_redraw();
-                            return;
                         }
-                    }
-
-                    // Build new_path: truncate/extend based on hover.
-                    let mut new_path = vec![path[0]];
-                    let mut menu_walk: &Menu<Message> = &self.menus[path[0]];
-                    for (depth, row) in hovered.iter().enumerate() {
-                        if depth == 0 {
-                            // depth 0 corresponds to the top-level dropdown.
-                        }
-                        let Some(row_idx) = *row else { break };
-                        match menu_walk.entries.get(row_idx) {
-                            Some(Entry::Submenu(sub)) => {
-                                new_path.push(row_idx);
-                                menu_walk = sub;
+                        HoverUpdate::Rebuild {
+                            open_path,
+                            hover_path,
+                        } => {
+                            self.state.open_path = Some(open_path);
+                            if self.state.hover_path != hover_path {
+                                self.state.hover_path = hover_path;
                             }
-                            _ => break,
+                            shell.request_redraw();
                         }
-                    }
-
-                    if new_path != path {
-                        self.state.open_path = Some(new_path);
-                    }
-                    if self.state.hover_path != hovered {
-                        self.state.hover_path = hovered.clone();
-                        shell.request_redraw();
+                        HoverUpdate::Preserve { hover_path } => {
+                            if self.state.hover_path != hover_path {
+                                self.state.hover_path = hover_path;
+                                shell.request_redraw();
+                            }
+                        }
                     }
                 }
             }
@@ -469,6 +498,326 @@ fn hit_row<Message>(
     cursor: Point,
 ) -> Option<usize> {
     let bounds = layout.bounds();
+    if !bounds.contains(cursor) {
+        return None;
+    }
+    let mut y = bounds.y + metrics.padding.top;
+    for (i, entry) in menu.entries.iter().enumerate() {
+        let h = match entry {
+            Entry::Separator => metrics.separator_height,
+            _ => metrics.row_height,
+        };
+        if cursor.y >= y && cursor.y < y + h {
+            return match entry {
+                Entry::Separator => None,
+                _ => Some(i),
+            };
+        }
+        y += h;
+    }
+    None
+}
+
+/// Compute invisible "hover bridge" rectangles for each open panel.
+///
+/// Bridges are hit-test only geometry that buffer the gap between
+/// adjacent panels (and between the bar and the top-level dropdown) so
+/// that brief excursions of the cursor across panel edges do not cause
+/// the path-rebuild logic to truncate `open_path` while the user is
+/// still on their way to a deeper panel. Bridge thickness equals
+/// `metrics.gap` (i.e. the theme's `Style::spacing`).
+///
+/// Returns one `Option<Rectangle>` per depth in `path`. `None` indicates
+/// no bridge is needed at that depth.
+fn hover_bridges(
+    path_len: usize,
+    child_layouts: &[Rectangle],
+    bar_label_bounds: &[Rectangle],
+    top_label_idx: usize,
+    metrics: Metrics,
+) -> Vec<Option<Rectangle>> {
+    let mut bridges: Vec<Option<Rectangle>> = Vec::with_capacity(path_len);
+    let gap = metrics.gap.max(0.0);
+
+    // Depth 0: bridge between the bar label and the top-level dropdown.
+    if let (Some(panel), Some(label)) = (
+        child_layouts.first().copied(),
+        bar_label_bounds.get(top_label_idx).copied(),
+    ) {
+        // Vertical span between the bar label's bottom edge and the
+        // panel's top edge. If the panel is above the label (bar
+        // anchored at the bottom of the screen, etc.), mirror.
+        let label_bottom = label.y + label.height;
+        let panel_top = panel.y;
+        let panel_bottom = panel.y + panel.height;
+
+        let v_rect = if panel_top >= label_bottom {
+            // Standard: panel below bar.
+            let mut top = label_bottom - gap;
+            let bottom = panel_top + gap;
+            if top > bottom {
+                top = bottom;
+            }
+            Some((top, bottom))
+        } else if panel_bottom <= label.y {
+            // Flipped: panel above bar.
+            let top = panel_bottom - gap;
+            let mut bottom = label.y + gap;
+            if bottom < top {
+                bottom = top;
+            }
+            Some((top, bottom))
+        } else {
+            None
+        };
+
+        bridges.push(v_rect.map(|(top, bottom)| {
+            // x range: intersection of label's x-range and panel's x-range.
+            let x0 = label.x.max(panel.x);
+            let x1 = (label.x + label.width).min(panel.x + panel.width);
+            if x1 > x0 {
+                Rectangle {
+                    x: x0,
+                    y: top,
+                    width: x1 - x0,
+                    height: (bottom - top).max(0.0),
+                }
+            } else {
+                Rectangle {
+                    x: 0.0,
+                    y: 0.0,
+                    width: 0.0,
+                    height: 0.0,
+                }
+            }
+        }));
+    } else {
+        bridges.push(None);
+    }
+
+    // Depth >= 1: bridge on the parent-facing edge of the child panel,
+    // plus a symmetric strip on the parent's side, forming a hover
+    // tunnel of total width 2 * gap centered on the shared edge.
+    for depth in 1..path_len {
+        let (Some(parent), Some(child)) = (
+            child_layouts.get(depth - 1).copied(),
+            child_layouts.get(depth).copied(),
+        ) else {
+            bridges.push(None);
+            continue;
+        };
+
+        let parent_right = parent.x + parent.width;
+        let parent_left = parent.x;
+        let child_right = child.x + child.width;
+        let child_left = child.x;
+
+        // Detect side: child to the right of parent (standard) vs.
+        // child to the left of parent (flipped due to viewport overflow).
+        let (x0, x1) = if child_left >= parent_right - 0.5 {
+            // Standard: child on right.
+            (parent_right - gap, child_left + gap)
+        } else if child_right <= parent_left + 0.5 {
+            // Flipped: child on left.
+            (child_right - gap, parent_left + gap)
+        } else {
+            // Overlapping panels — no bridge needed.
+            bridges.push(None);
+            continue;
+        };
+
+        // Vertical extent: union of the parent and child y-ranges so
+        // the bridge spans both panels' vertical reach.
+        let y0 = parent.y.min(child.y);
+        let y1 = (parent.y + parent.height).max(child.y + child.height);
+
+        if x1 > x0 && y1 > y0 {
+            bridges.push(Some(Rectangle {
+                x: x0,
+                y: y0,
+                width: x1 - x0,
+                height: y1 - y0,
+            }));
+        } else {
+            bridges.push(None);
+        }
+    }
+
+    bridges
+}
+
+/// Outcome of evaluating a `CursorMoved` event against the menu
+/// overlay's current state. Pure data so the decision logic can be
+/// unit-tested in isolation from iced's event plumbing.
+#[derive(Debug, Clone, PartialEq)]
+pub(super) enum HoverUpdate {
+    /// The cursor is over a different top-level bar label than the one
+    /// currently open. Switch to it.
+    SwitchTopLevel(usize),
+    /// The open path and/or hovered rows changed.
+    Rebuild {
+        open_path: Vec<usize>,
+        hover_path: Vec<Option<usize>>,
+    },
+    /// The open path is unchanged; only the hover highlights may differ.
+    Preserve { hover_path: Vec<Option<usize>> },
+}
+
+/// Pure helper that decides what should happen on a `CursorMoved`
+/// event.
+///
+/// Splitting this out from [`MenuOverlay::update`] makes the hover
+/// behaviour testable without spinning up a real iced runtime: callers
+/// in tests construct synthetic [`Rectangle`] values for `child_bounds`
+/// and `bar_label_bounds`, build a small [`Menu`] tree, and feed a
+/// cursor [`Point`] through this function.
+#[allow(clippy::too_many_arguments)]
+pub(super) fn compute_hover_update<Message>(
+    menus: &[Menu<Message>],
+    path: &[usize],
+    prev_hover_path: &[Option<usize>],
+    child_bounds: &[Rectangle],
+    bar_label_bounds: &[Rectangle],
+    bridges: &[Option<Rectangle>],
+    metrics: Metrics,
+    cursor: Point,
+) -> HoverUpdate {
+    debug_assert!(!path.is_empty());
+
+    // Bar-label switch.
+    for (i, label_bounds) in bar_label_bounds.iter().enumerate() {
+        if label_bounds.contains(cursor) && path[0] != i {
+            return HoverUpdate::SwitchTopLevel(i);
+        }
+    }
+
+    // Compute hovered row per depth.
+    let mut hovered: Vec<Option<usize>> = Vec::with_capacity(path.len());
+    let mut current_menu: &Menu<Message> = &menus[path[0]];
+    for (depth, _) in path.iter().enumerate() {
+        let Some(panel) = child_bounds.get(depth).copied() else {
+            hovered.push(None);
+            break;
+        };
+        let row = if panel.contains(cursor) {
+            hit_row_in_bounds(current_menu, panel, metrics, cursor)
+        } else if bridges
+            .get(depth)
+            .and_then(|b| *b)
+            .is_some_and(|r| r.contains(cursor))
+        {
+            // Inside the bridge — preserve the previously highlighted row
+            // so the highlight does not flicker during transit.
+            prev_hover_path.get(depth).copied().flatten()
+        } else {
+            None
+        };
+        hovered.push(row);
+
+        if let Some(next) = path.get(depth + 1).copied() {
+            if let Some(Entry::Submenu(sub)) = current_menu.entries.get(next) {
+                current_menu = sub;
+            } else {
+                break;
+            }
+        }
+    }
+
+    // Bridge guard: if cursor is outside every panel but inside a
+    // bridge, preserve the current path entirely (this is the
+    // pre-existing transit-forgiveness behaviour).
+    let in_any_panel = child_bounds.iter().any(|p| p.contains(cursor));
+    let in_any_bridge = bridges
+        .iter()
+        .filter_map(|b| *b)
+        .any(|r| r.contains(cursor));
+    if !in_any_panel && in_any_bridge {
+        return HoverUpdate::Preserve {
+            hover_path: hovered,
+        };
+    }
+
+    // Find the deepest depth whose panel actually contains the cursor.
+    // This is the "anchor" — panels at or above this depth must remain
+    // open. Walking the rebuild from depth 0 (as the previous
+    // implementation did) would close deeper panels the moment the
+    // cursor crossed an ancestor's boundary, which is precisely the
+    // submenu-inaccessible bug.
+    let anchor = (0..path.len())
+        .rev()
+        .find(|&d| child_bounds.get(d).is_some_and(|p| p.contains(cursor)));
+
+    let new_path: Vec<usize> = match anchor {
+        None => {
+            // Cursor outside every open panel and outside every
+            // bridge. Preserve the path — closing on outside hover is
+            // not desired (matches the bar's `CursorLeft` policy).
+            path.to_vec()
+        }
+        Some(d) => {
+            let menu_at_d = walk_menu(menus, &path[..=d]);
+            let panel = child_bounds[d];
+            let row = hit_row_in_bounds(menu_at_d, panel, metrics, cursor);
+
+            match row {
+                None => {
+                    // Cursor is inside the panel but on padding or a
+                    // separator. Preserve the entire path so deeper
+                    // panels do not flicker closed.
+                    path.to_vec()
+                }
+                Some(r) => {
+                    let mut np: Vec<usize> = path.iter().take(d + 1).copied().collect();
+                    if let Some(Entry::Submenu(_)) = menu_at_d.entries.get(r) {
+                        np.push(r);
+                        // Auto-extend deeper if subsequent depths in
+                        // `hovered` continue to point to submenu rows.
+                        // Preserves the current behaviour where
+                        // hovering a submenu row in the active branch
+                        // automatically opens its child.
+                        let mut walk = match menu_at_d.entries.get(r) {
+                            Some(Entry::Submenu(sub)) => sub,
+                            _ => unreachable!(),
+                        };
+                        for sub_row in hovered.iter().skip(d + 1) {
+                            let Some(idx) = *sub_row else { break };
+                            match walk.entries.get(idx) {
+                                Some(Entry::Submenu(deeper)) => {
+                                    np.push(idx);
+                                    walk = deeper;
+                                }
+                                _ => break,
+                            }
+                        }
+                    }
+                    // For non-submenu rows the path is truncated to
+                    // [..=d], legitimately closing any deeper panels.
+                    np
+                }
+            }
+        }
+    };
+
+    if new_path != path {
+        HoverUpdate::Rebuild {
+            open_path: new_path,
+            hover_path: hovered,
+        }
+    } else {
+        HoverUpdate::Preserve {
+            hover_path: hovered,
+        }
+    }
+}
+
+/// Variant of [`hit_row`] that operates on a raw [`Rectangle`] so it
+/// can be called from [`compute_hover_update`] without a [`Layout`].
+fn hit_row_in_bounds<Message>(
+    menu: &Menu<Message>,
+    bounds: Rectangle,
+    metrics: Metrics,
+    cursor: Point,
+) -> Option<usize> {
     if !bounds.contains(cursor) {
         return None;
     }
@@ -916,5 +1265,120 @@ fn draw_menu<Message, Renderer>(
         }
 
         y += metrics.row_height;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    //! Regression tests for the menu overlay's hover-driven path
+    //! decisions. These exercise [`compute_hover_update`] directly so
+    //! they need no real iced runtime.
+
+    use super::*;
+    use crate::menu::item::{Item, Menu};
+
+    #[derive(Clone, Debug, PartialEq)]
+    struct Msg;
+
+    fn test_metrics() -> Metrics {
+        // Mirrors `Metrics::new` with values typical of the demo theme.
+        Metrics::new(
+            14.0,
+            Padding {
+                top: 4.0,
+                bottom: 4.0,
+                left: 8.0,
+                right: 8.0,
+            },
+            8.0,
+        )
+    }
+
+    /// Regression test: when the cursor moves directly from the parent
+    /// dropdown panel into an already-open second-level submenu panel,
+    /// the second-level panel must remain open. Prior to the fix the
+    /// rebuild logic truncated `open_path` because the cursor had left
+    /// the parent panel, even though it had simultaneously entered the
+    /// child panel.
+    #[test]
+    fn cursor_in_child_panel_keeps_submenu_open() {
+        // Parent menu with a Submenu at index 2.
+        let submenu: Menu<Msg> = Menu::new("More")
+            .push(Item::new("Deep A"))
+            .push(Item::new("Deep B"));
+        let menus: Vec<Menu<Msg>> = vec![
+            Menu::new("File")
+                .push(Item::new("Open"))
+                .push(Item::new("Save"))
+                .submenu(submenu),
+        ];
+
+        let metrics = test_metrics();
+
+        // Parent panel: row 0 = Open, row 1 = Save, row 2 = Submenu.
+        let parent_bounds = Rectangle {
+            x: 0.0,
+            y: 20.0,
+            width: 160.0,
+            height: metrics.popup_padding.top
+                + 3.0 * metrics.row_height
+                + metrics.popup_padding.bottom,
+        };
+        // Child panel sits flush to the right of the parent and is
+        // anchored vertically near the submenu trigger row.
+        let child_bounds_rect = Rectangle {
+            x: parent_bounds.x + parent_bounds.width,
+            y: parent_bounds.y + metrics.popup_padding.top + 2.0 * metrics.row_height,
+            width: 160.0,
+            height: metrics.popup_padding.top
+                + 2.0 * metrics.row_height
+                + metrics.popup_padding.bottom,
+        };
+        let child_bounds = vec![parent_bounds, child_bounds_rect];
+
+        // A simple bar with one label above the parent panel.
+        let bar_label_bounds = vec![Rectangle {
+            x: 0.0,
+            y: 0.0,
+            width: 60.0,
+            height: 20.0,
+        }];
+
+        let bridges = hover_bridges(2, &child_bounds, &bar_label_bounds, 0, metrics);
+
+        let path = vec![0, 2];
+        // Previously the user was hovering the submenu trigger row.
+        let prev_hover_path = vec![Some(2_usize), None];
+
+        // Cursor sits squarely inside the child panel, on its first row.
+        let cursor = Point::new(
+            child_bounds_rect.x + 20.0,
+            child_bounds_rect.y + metrics.popup_padding.top + metrics.row_height * 0.5,
+        );
+
+        let result = compute_hover_update(
+            &menus,
+            &path,
+            &prev_hover_path,
+            &child_bounds,
+            &bar_label_bounds,
+            &bridges,
+            metrics,
+            cursor,
+        );
+
+        // The submenu panel must remain open. Either Preserve (path
+        // unchanged) or a Rebuild that keeps both depths is acceptable;
+        // anything that drops the trailing `2` is the bug.
+        let new_path: Vec<usize> = match result {
+            HoverUpdate::Preserve { .. } => path.clone(),
+            HoverUpdate::Rebuild { open_path, .. } => open_path,
+            HoverUpdate::SwitchTopLevel(_) => panic!("unexpected SwitchTopLevel"),
+        };
+        assert_eq!(
+            new_path, path,
+            "moving the cursor into the second-level submenu panel must \
+             not close it; got open_path = {new_path:?}"
+        );
     }
 }
