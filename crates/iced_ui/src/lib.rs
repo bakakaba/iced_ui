@@ -7,12 +7,16 @@
 //! - [`Card`] — a rounded-corner presentational container with a flat
 //!   or elevated (drop-shadowed) variant, and optional background
 //!   color or image.
+//! - [`list::List`] — a vertical list of interactive items with
+//!   hover/press feedback, suitable for navigation sidebars and
+//!   selection lists.
 //!
 //! [iced]: https://github.com/iced-rs/iced
 
 #![warn(missing_docs)]
 
 pub mod card;
+pub mod list;
 pub mod menu;
 pub mod theme;
 

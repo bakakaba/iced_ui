@@ -6,6 +6,8 @@
 //!   shortcuts, separators and nested submenus.
 //! - [`iced_ui::Card`]: a rounded-corner container with flat and
 //!   elevated variants and optional color / image backgrounds.
+//! - [`iced_ui::list::List`]: a vertical interactive list used here as
+//!   the sidebar navigation between component pages.
 //!
 //! The right-hand pane drives a live [`iced_ui::Theme`]: pick any
 //! built-in [`iced::Theme`] for the colors, optionally customize the
@@ -21,6 +23,7 @@ use iced::{Color, Length, Subscription, Task};
 
 use iced_ui::Card;
 use iced_ui::Theme;
+use iced_ui::list;
 use iced_ui::menu::{Icon, Item, KeyBinding, Menu, MenuBar, Separator};
 
 /// Convenience alias: every widget in the demo's tree is themed by
@@ -33,6 +36,27 @@ pub fn main() -> iced::Result {
         .subscription(Demo::subscription)
         .theme(Demo::theme)
         .run()
+}
+
+/// The pages available in the sidebar navigation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+enum Page {
+    #[default]
+    Menu,
+    Card,
+    List,
+}
+
+impl Page {
+    const ALL: [Self; 3] = [Self::Menu, Self::Card, Self::List];
+
+    fn label(self) -> &'static str {
+        match self {
+            Self::Menu => "MenuBar",
+            Self::Card => "Card",
+            Self::List => "List",
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -51,6 +75,8 @@ struct Demo {
     /// to build a [`iced::Theme::custom`] when `customize_palette` is
     /// `true`.
     custom_palette: Palette,
+    /// The currently active page in the navigation.
+    page: Page,
 }
 
 impl Default for Demo {
@@ -65,6 +91,7 @@ impl Default for Demo {
             sidebar_visible: true,
             customize_palette: false,
             custom_palette,
+            page: Page::default(),
         }
     }
 }
@@ -191,6 +218,7 @@ enum Message {
     },
     RoundnessChanged(u8),
     SpacingChanged(u8),
+    Navigate(Page),
 }
 
 impl Demo {
@@ -236,6 +264,9 @@ impl Demo {
             Message::SpacingChanged(value) => {
                 self.theme.spacing = value;
             }
+            Message::Navigate(page) => {
+                self.page = page;
+            }
         }
         Task::none()
     }
@@ -258,41 +289,21 @@ impl Demo {
     fn view(&self) -> Element<'_, Message> {
         let menu_bar = build_menu_bar(self.sidebar_visible);
 
-        let status = match &self.last_action {
-            Some(last) => format!("Last action: {last} (count: {})", self.counter),
-            None => "Try opening a menu, activating an item, or pressing a shortcut.".to_string(),
-        };
+        // -- Navigation sidebar (left) --
+        let nav = build_nav_sidebar(self.page);
 
-        let menu_section = column![
-            text("MenuBar").size(20),
-            text(status),
-            row![
-                text("Try keyboard shortcuts: "),
-                text("Ctrl+N, Ctrl+O, Ctrl+S, Ctrl+Z, Ctrl+Shift+Z, Ctrl+Q, F1").size(14),
-            ]
-            .spacing(8),
-        ]
-        .spacing(8);
+        // -- Main content area --
+        let body = container(scrollable(self.build_page_content()))
+            .width(Length::Fill)
+            .height(Length::Fill);
 
-        let body = container(scrollable(
-            column![
-                text("iced_ui kitchen sink").size(28),
-                menu_section,
-                text("Card").size(20),
-                build_card_showcase(),
-            ]
-            .spacing(16)
-            .padding(20),
-        ))
-        .width(Length::Fill)
-        .height(Length::Fill);
-
+        // -- Settings pane (right) --
         let main_row: Element<'_, Message> = if self.sidebar_visible {
-            row![body, build_settings_pane(self)]
+            row![nav, body, build_settings_pane(self)]
                 .height(Length::Fill)
                 .into()
         } else {
-            body.into()
+            row![nav, body].height(Length::Fill).into()
         };
 
         column![menu_bar, main_row]
@@ -301,10 +312,114 @@ impl Demo {
             .into()
     }
 
+    fn build_page_content(&self) -> Element<'_, Message> {
+        match self.page {
+            Page::Menu => build_menu_page(self),
+            Page::Card => build_card_page(),
+            Page::List => build_list_page(),
+        }
+    }
+
     fn subscription(&self) -> Subscription<Message> {
         iced_ui::shortcuts(build_menu_bar(self.sidebar_visible).shortcuts())
     }
 }
+
+// -- Navigation sidebar --
+
+fn build_nav_sidebar(current_page: Page) -> Element<'static, Message> {
+    let mut nav_list = list::List::new();
+
+    for page in Page::ALL {
+        let label = if page == current_page {
+            text(page.label()).size(14).color(Color::WHITE)
+        } else {
+            text(page.label()).size(14)
+        };
+        let item = list::Item::new(label).on_press(Message::Navigate(page));
+        nav_list = nav_list.push(item);
+    }
+
+    let nav_list = nav_list
+        .width(Length::Fixed(160.0))
+        .style(move |theme: &Theme, status| nav_item_style(theme, status, current_page));
+
+    container(nav_list).height(Length::Fill).into()
+}
+
+/// Custom item style for the navigation sidebar. Highlights the active
+/// page with the primary color.
+fn nav_item_style(theme: &Theme, status: list::Status, _current_page: Page) -> list::ItemStyle {
+    let palette = theme.extended_palette();
+
+    match status {
+        list::Status::Active => list::ItemStyle {
+            background: None,
+            border: iced::Border::default(),
+            text_color: None,
+        },
+        list::Status::Hovered => list::ItemStyle {
+            background: Some(iced::Background::Color(palette.background.weak.color)),
+            border: iced::Border::default(),
+            text_color: None,
+        },
+        list::Status::Pressed => list::ItemStyle {
+            background: Some(iced::Background::Color(palette.primary.weak.color)),
+            border: iced::Border::default(),
+            text_color: None,
+        },
+    }
+}
+
+// -- Page content builders --
+
+fn build_menu_page<'a>(demo: &Demo) -> Element<'a, Message> {
+    let status = match &demo.last_action {
+        Some(last) => format!("Last action: {last} (count: {})", demo.counter),
+        None => "Try opening a menu, activating an item, or pressing a shortcut.".to_string(),
+    };
+
+    column![
+        text("MenuBar").size(20),
+        text(status),
+        row![
+            text("Try keyboard shortcuts: "),
+            text("Ctrl+N, Ctrl+O, Ctrl+S, Ctrl+Z, Ctrl+Shift+Z, Ctrl+Q, F1").size(14),
+        ]
+        .spacing(8),
+    ]
+    .spacing(8)
+    .padding(20)
+    .into()
+}
+
+fn build_card_page<'a>() -> Element<'a, Message> {
+    column![text("Card").size(20), build_card_showcase(),]
+        .spacing(16)
+        .padding(20)
+        .into()
+}
+
+fn build_list_page<'a>() -> Element<'a, Message> {
+    let example_list = list::List::new()
+        .push(list::Item::new(text("Apple")))
+        .push(list::Item::new(text("Banana")))
+        .push(list::Item::new(text("Cherry")))
+        .push(list::Item::new(text("Dragonfruit")))
+        .push(list::Item::new(text("Elderberry")))
+        .width(Length::Fixed(200.0));
+
+    column![
+        text("List").size(20),
+        text("A vertical list of interactive items with hover/press feedback.").size(14),
+        example_list,
+    ]
+    .spacing(16)
+    .padding(20)
+    .into()
+}
+
+// -- Menu bar --
 
 fn build_menu_bar<'a>(sidebar_visible: bool) -> MenuBar<'a, Message> {
     MenuBar::new()
@@ -314,6 +429,8 @@ fn build_menu_bar<'a>(sidebar_visible: bool) -> MenuBar<'a, Message> {
         .push(view_menu(sidebar_visible))
         .push(help_menu())
 }
+
+// -- Settings pane --
 
 fn build_settings_pane(demo: &Demo) -> Element<'_, Message> {
     let theme_picker = pick_list(
@@ -426,6 +543,8 @@ fn palette_field_row<'a>(field: PaletteField, palette: Palette) -> Element<'a, M
     group.into()
 }
 
+// -- Card showcase --
+
 fn build_card_showcase<'a>() -> Element<'a, Message> {
     let flat_card = Card::new(
         column![
@@ -529,6 +648,8 @@ fn gradient_svg_handle() -> advanced_svg::Handle {
 </svg>"##;
     advanced_svg::Handle::from_memory(SVG.to_vec())
 }
+
+// -- Menus --
 
 fn file_menu() -> Menu<Message> {
     let recent = Menu::new("Open Recent")
