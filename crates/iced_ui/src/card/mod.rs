@@ -6,7 +6,7 @@
 
 mod style;
 
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::marker::PhantomData;
 
 use iced::advanced::image as advanced_image;
@@ -24,6 +24,8 @@ use iced::{
 };
 
 pub use style::{Catalog, Style, StyleFn, Variant, default, elevated, flat};
+
+use crate::{PaddingSource, SpacingBase};
 
 /// A background image for a [`Card`], either raster or vector.
 #[derive(Debug, Clone)]
@@ -46,13 +48,29 @@ struct SvgRaster {
 }
 
 /// Internal widget state for a [`Card`].
-#[derive(Debug, Default)]
+#[derive(Debug)]
 struct CardState {
     /// Lazily-populated cache for the SVG background image, if any.
     /// Wrapped in a [`RefCell`] so that the immutable [`Widget::draw`]
     /// hook can refresh it when the card's size or SVG source
     /// changes.
     svg_raster: RefCell<Option<SvgRaster>>,
+    /// Last-resolved padding, in logical pixels. Cached so that
+    /// [`Widget::layout`], which has no access to the active theme,
+    /// can use the most recent value seen by [`Widget::draw`]. The
+    /// initial value resolves [`PaddingSource::Absolute`] against
+    /// itself (theme-independent) or applies the default spacing base
+    /// for [`PaddingSource::Space`] until the first draw refreshes it.
+    padding_cache: Cell<Padding>,
+}
+
+impl Default for CardState {
+    fn default() -> Self {
+        Self {
+            svg_raster: RefCell::new(None),
+            padding_cache: Cell::new(Padding::new(0.0)),
+        }
+    }
 }
 
 /// A presentational container with rounded corners, an optional
@@ -80,12 +98,12 @@ struct CardState {
 ///
 /// ```no_run
 /// use iced::widget::text;
-/// use iced_ui::{Card, Theme};
+/// use iced_ui::{Card, Space, Theme};
 ///
 /// # type Message = ();
 /// # fn _build() -> iced::Element<'static, Message, Theme> {
 /// Card::new(text("Hello!"))
-///     .padding(16)
+///     .padding(Space::sx(4.0))
 ///     .elevated()
 ///     .into()
 /// # }
@@ -102,7 +120,7 @@ where
     height: Length,
     max_width: f32,
     max_height: f32,
-    padding: Padding,
+    padding: PaddingSource,
     variant: Variant,
     background: Option<Background>,
     background_image: Option<BackgroundImage>,
@@ -129,7 +147,7 @@ where
             height: size.height.fluid(),
             max_width: f32::INFINITY,
             max_height: f32::INFINITY,
-            padding: Padding::new(12.0),
+            padding: PaddingSource::from(crate::Space::sx(2.0)),
             variant: Variant::Flat,
             background: None,
             background_image: None,
@@ -163,9 +181,15 @@ where
         self
     }
 
-    /// Sets the inner padding of the [`Card`]. Defaults to `12` on all
-    /// sides.
-    pub fn padding(mut self, padding: impl Into<Padding>) -> Self {
+    /// Sets the inner padding of the [`Card`]. Defaults to
+    /// [`Space::sx(2.0)`](crate::Space::sx), which resolves to
+    /// `8.0` logical pixels at the default [`spacing`].
+    ///
+    /// Accepts a [`Space`](crate::Space), an [`iced::Padding`] or a
+    /// raw `[f32; 2]` (absolute).
+    ///
+    /// [`spacing`]: crate::Theme::spacing
+    pub fn padding(mut self, padding: impl Into<PaddingSource>) -> Self {
         self.padding = padding.into();
         self
     }
@@ -235,7 +259,7 @@ where
 impl<'a, Message, Theme, Renderer> Widget<Message, Theme, Renderer>
     for Card<'a, Message, Theme, Renderer>
 where
-    Theme: Catalog,
+    Theme: Catalog + SpacingBase,
     Renderer: renderer::Renderer
         + advanced_image::Renderer<Handle = advanced_image::Handle>
         + advanced_svg::Renderer,
@@ -245,7 +269,16 @@ where
     }
 
     fn state(&self) -> tree::State {
-        tree::State::new(CardState::default())
+        // Pre-seed the padding cache with the absolute resolution of
+        // the configured padding source. For `Space` variants we use
+        // the default spacing base so the very first layout produces
+        // a sensible value; `draw` will refresh the cache against the
+        // actual theme on every frame.
+        let initial_padding = self.padding.resolve(crate::Theme::DEFAULT_SPACING);
+        tree::State::new(CardState {
+            svg_raster: RefCell::new(None),
+            padding_cache: Cell::new(initial_padding),
+        })
     }
 
     fn children(&self) -> Vec<Tree> {
@@ -269,11 +302,13 @@ where
         renderer: &Renderer,
         limits: &layout::Limits,
     ) -> layout::Node {
+        let state = tree.state.downcast_ref::<CardState>();
+        let padding = state.padding_cache.get();
         layout::positioned(
             &limits.max_width(self.max_width).max_height(self.max_height),
             self.width,
             self.height,
-            self.padding,
+            padding,
             |limits| {
                 self.content.as_widget_mut().layout(
                     &mut tree.children[0],
@@ -366,6 +401,13 @@ where
 
         let style = theme.style(&self.class, self.variant);
 
+        // Refresh the padding cache against the active theme so the
+        // next layout sees the most recent spacing base.
+        let state = tree.state.downcast_ref::<CardState>();
+        state
+            .padding_cache
+            .set(self.padding.resolve(theme.spacing()));
+
         // 1. Draw the frame (shadow + background color + border) as a
         //    single rounded quad. The background provided on the
         //    widget directly takes precedence over the style's.
@@ -419,7 +461,6 @@ where
                     });
                 }
                 BackgroundImage::Svg(handle) => {
-                    let state = tree.state.downcast_ref::<CardState>();
                     if let Some(rasterized) = ensure_svg_raster(state, handle, bounds) {
                         <Renderer as advanced_image::Renderer>::draw_image(
                             renderer,
@@ -575,7 +616,7 @@ impl<'a, Message, Theme, Renderer> From<Card<'a, Message, Theme, Renderer>>
     for Element<'a, Message, Theme, Renderer>
 where
     Message: 'a,
-    Theme: Catalog + 'a,
+    Theme: Catalog + SpacingBase + 'a,
     Renderer: renderer::Renderer
         + advanced_image::Renderer<Handle = advanced_image::Handle>
         + advanced_svg::Renderer

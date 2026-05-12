@@ -20,4 +20,4 @@ pub use card::{Card, Variant};
 pub use menu::{
     Catalog, Icon, Item, KeyBinding, Menu, MenuBar, Separator, Style, StyleFn, default, shortcuts,
 };
-pub use theme::Theme;
+pub use theme::{FontSize, PaddingSource, Roundness, RoundnessBase, Space, SpacingBase, Theme};

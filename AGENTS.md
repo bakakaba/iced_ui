@@ -36,6 +36,11 @@ explicit request from a maintainer.
    must stay internal (no `publish = true`, no crates.io metadata).
 4. **The demo must stay a kitchen sink.** Every component exposed by
    `iced_ui` should have a corresponding showcase in `crates/demo/`.
+5. **Demo showcases defaults.** Component demonstrations in
+   `crates/demo/` must show each widget using its default
+   configuration. Do not override default values (padding, spacing,
+   roundness, etc.) — the demo should reflect the out-of-the-box
+   appearance driven by the theme.
 
 ## Adding a Component
 

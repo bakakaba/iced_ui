@@ -2,7 +2,7 @@
 
 use iced::{Background, Border, Color, Shadow};
 
-use crate::Theme;
+use crate::{Roundness, Space, Theme};
 
 /// The visual style of a [`MenuBar`](crate::menu::MenuBar) in a single
 /// state.
@@ -72,8 +72,8 @@ pub type StyleFn<'a, Theme> = Box<dyn Fn(&Theme) -> Style + 'a>;
 /// A catalog of theme-driven [`Style`]s for the menu bar.
 ///
 /// The default class — [`Catalog::default`] — uses [`default`] to derive
-/// a [`Style`] from the theme's extended palette, roundness and
-/// spacing.
+/// a [`Style`] from the theme's extended palette, with default
+/// roundness and spacing multipliers.
 pub trait Catalog {
     /// The identifier of a particular style.
     type Class<'a>;
@@ -111,11 +111,11 @@ pub fn default(theme: &Theme) -> Style {
         bar_text: palette.background.weak.text,
         bar_item_background_active: palette.primary.base.color.into(),
         bar_text_active: palette.primary.base.text,
-        item_radius: theme.roundness,
+        item_radius: theme.radius(Roundness::sx(2.0)),
 
         menu_background: palette.background.base.color.into(),
         menu_border: Border {
-            radius: theme.roundness.into(),
+            radius: theme.radius(Roundness::sx(2.0)).into(),
             width: 1.0,
             color: palette.background.strong.color,
         },
@@ -137,6 +137,6 @@ pub fn default(theme: &Theme) -> Style {
         check_glyph: '\u{2713}',
         check_color: palette.primary.base.color,
 
-        spacing: theme.spacing,
+        spacing: theme.space(Space::sx(2.0)),
     }
 }

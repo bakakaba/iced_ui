@@ -189,8 +189,8 @@ enum Message {
         channel: Channel,
         value: f32,
     },
-    RoundnessChanged(f32),
-    SpacingChanged(f32),
+    RoundnessChanged(u8),
+    SpacingChanged(u8),
 }
 
 impl Demo {
@@ -241,7 +241,8 @@ impl Demo {
     }
 
     /// Recomputes [`Theme::colors`] from the dropdown selection and the
-    /// "Customize palette" toggle. Roundness and spacing are preserved.
+    /// "Customize palette" toggle. Roundness and spacing bases are
+    /// preserved.
     fn refresh_colors(&mut self) {
         self.theme.colors = if self.customize_palette {
             iced::Theme::custom("Custom".to_string(), self.custom_palette)
@@ -339,42 +340,42 @@ fn build_settings_pane(demo: &Demo) -> Element<'_, Message> {
         content = content.push(editor);
     }
 
-    content = content.push(scalar_slider(
+    content = content.push(base_slider(
         "Roundness",
         demo.theme.roundness,
-        0.0..=24.0,
+        0..=24,
         Message::RoundnessChanged,
     ));
-    content = content.push(scalar_slider(
+    content = content.push(base_slider(
         "Spacing",
         demo.theme.spacing,
-        0.0..=24.0,
+        0..=24,
         Message::SpacingChanged,
     ));
 
     let pane = Card::new(scrollable(content.padding(4)))
         .width(Length::Fixed(280.0))
         .height(Length::Fill)
-        .padding(16)
+        .padding(iced_ui::Space::sx(4.0))
         .elevated();
 
     container(pane).padding(12).into()
 }
 
-fn scalar_slider<'a>(
+fn base_slider<'a>(
     label: &'a str,
-    value: f32,
-    range: std::ops::RangeInclusive<f32>,
-    on_change: impl Fn(f32) -> Message + 'a,
+    value: u8,
+    range: std::ops::RangeInclusive<u8>,
+    on_change: impl Fn(u8) -> Message + 'a,
 ) -> Element<'a, Message> {
     column![
         row![
             text(label).size(14),
             Space::new().width(Length::Fill),
-            text(format!("{value:.1} px")).size(12),
+            text(format!("{value}")).size(12),
         ]
         .align_y(iced::Alignment::Center),
-        slider(range, value, on_change).step(0.5_f32),
+        slider(range, value, on_change),
     ]
     .spacing(4)
     .into()
@@ -433,8 +434,7 @@ fn build_card_showcase<'a>() -> Element<'a, Message> {
         ]
         .spacing(6),
     )
-    .width(Length::Fixed(220.0))
-    .padding(14);
+    .width(Length::Fixed(220.0));
 
     let elevated_card = Card::new(
         column![
@@ -444,7 +444,6 @@ fn build_card_showcase<'a>() -> Element<'a, Message> {
         .spacing(6),
     )
     .width(Length::Fixed(220.0))
-    .padding(14)
     .elevated();
 
     let tinted_card = Card::new(
@@ -457,7 +456,6 @@ fn build_card_showcase<'a>() -> Element<'a, Message> {
         .spacing(6),
     )
     .width(Length::Fixed(220.0))
-    .padding(14)
     .elevated()
     .background(iced::Color::from_rgb(0.18, 0.33, 0.62));
 
@@ -473,7 +471,6 @@ fn build_card_showcase<'a>() -> Element<'a, Message> {
     )
     .width(Length::Fixed(220.0))
     .height(Length::Fixed(140.0))
-    .padding(14)
     .background_image(checker_handle());
 
     let svg_card = Card::new(
@@ -488,7 +485,6 @@ fn build_card_showcase<'a>() -> Element<'a, Message> {
     )
     .width(Length::Fixed(220.0))
     .height(Length::Fixed(140.0))
-    .padding(14)
     .elevated()
     .background_svg(gradient_svg_handle());
 

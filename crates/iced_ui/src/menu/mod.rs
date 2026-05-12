@@ -29,6 +29,8 @@ pub use item::{Entry, Icon, Item, Menu, Separator};
 pub use shortcut::{KeyBinding, shortcuts};
 pub use style::{Catalog, Style, StyleFn, default};
 
+use crate::{PaddingSource, SpacingBase};
+
 use item::collect_shortcuts;
 use overlay::{MenuOverlay, Metrics};
 
@@ -62,6 +64,12 @@ pub(crate) struct State<P: Paragraph> {
     /// overlay) can stay consistent with the most recent draw. Kept in
     /// a [`Cell`] so `draw`, which only sees `&State`, can refresh it.
     pub(crate) spacing_cache: Cell<f32>,
+    /// Last-resolved padding (in logical pixels), cached for the same
+    /// reason as [`spacing_cache`](Self::spacing_cache). The widget
+    /// stores its padding as a [`PaddingSource`] (which may be a
+    /// themed [`Space`] token); resolution requires `&Theme`, so we
+    /// cache the resolved value here.
+    pub(crate) padding_cache: Cell<Padding>,
 }
 
 impl<P: Paragraph> Default for State<P> {
@@ -73,6 +81,7 @@ impl<P: Paragraph> Default for State<P> {
             bar_hover: None,
             hover_path: Vec::new(),
             spacing_cache: Cell::new(8.0),
+            padding_cache: Cell::new(Padding::new(4.0)),
         }
     }
 }
@@ -95,7 +104,7 @@ where
 {
     menus: Vec<Menu<Message>>,
     width: Length,
-    padding: Padding,
+    padding: PaddingSource,
     text_size: Option<Pixels>,
     font: Option<Font>,
     class: <Theme as Catalog>::Class<'a>,
@@ -112,7 +121,7 @@ where
         Self {
             menus: Vec::new(),
             width: Length::Fill,
-            padding: Padding::new(4.0),
+            padding: PaddingSource::from(crate::Space::sx(1.0)),
             text_size: None,
             font: None,
             class: <Theme as Catalog>::default(),
@@ -141,7 +150,15 @@ where
     }
 
     /// Sets the outer padding around the bar's row of labels.
-    pub fn padding(mut self, padding: impl Into<Padding>) -> Self {
+    /// Defaults to [`Space::sx(1.0)`](crate::Space::sx), which
+    /// resolves to `4.0` logical pixels at the default
+    /// [`spacing`].
+    ///
+    /// Accepts a [`Space`](crate::Space), an [`iced::Padding`] or a
+    /// raw `[f32; 2]` (absolute).
+    ///
+    /// [`spacing`]: crate::Theme::spacing
+    pub fn padding(mut self, padding: impl Into<PaddingSource>) -> Self {
         self.padding = padding.into();
         self
     }
@@ -204,7 +221,7 @@ impl<'a, Message, Theme, Renderer> Widget<Message, Theme, Renderer>
     for MenuBar<'a, Message, Theme, Renderer>
 where
     Message: Clone,
-    Theme: Catalog,
+    Theme: Catalog + SpacingBase,
     Renderer: text::Renderer<Font = Font>,
 {
     fn tag(&self) -> tree::Tag {
@@ -212,7 +229,16 @@ where
     }
 
     fn state(&self) -> tree::State {
-        tree::State::new(State::<Renderer::Paragraph>::default())
+        // Pre-seed caches so the very first layout — which has no
+        // access to `&Theme` — still produces sensible values. `draw`
+        // refreshes both caches against the active theme on every
+        // frame.
+        let initial_padding = self.padding.resolve(crate::Theme::DEFAULT_SPACING);
+        let state = State::<Renderer::Paragraph> {
+            padding_cache: Cell::new(initial_padding),
+            ..State::<Renderer::Paragraph>::default()
+        };
+        tree::State::new(state)
     }
 
     fn size(&self) -> Size<Length> {
@@ -233,7 +259,8 @@ where
         let text_size = self.text_size.unwrap_or_else(|| renderer.default_size()).0;
         let font = self.font.unwrap_or_else(|| renderer.default_font());
         let spacing = state.spacing_cache.get();
-        let metrics = Metrics::new(text_size, self.padding, spacing);
+        let padding = state.padding_cache.get();
+        let metrics = Metrics::new(text_size, padding, spacing);
 
         // Resize cached bar-label paragraphs to match.
         if state.bar_labels.len() != self.menus.len() {
@@ -264,10 +291,10 @@ where
         let max_width = limits.max().width;
         let width = match self.width {
             Length::Shrink => {
-                let mut w = self.padding.left + self.padding.right;
+                let mut w = padding.left + padding.right;
                 let n = state.bar_labels.len();
                 for slot in &state.bar_labels {
-                    w += slot.paragraph.min_width() + self.padding.left + self.padding.right;
+                    w += slot.paragraph.min_width() + padding.left + padding.right;
                 }
                 if n > 1 {
                     w += spacing * (n as f32 - 1.0);
@@ -293,6 +320,8 @@ where
         let state = tree.state.downcast_ref::<State<Renderer::Paragraph>>();
         let style = theme.style(&self.class);
         state.spacing_cache.set(style.spacing);
+        let padding = self.padding.resolve(theme.spacing());
+        state.padding_cache.set(padding);
         let bounds = layout.bounds();
 
         renderer.fill_quad(
@@ -307,14 +336,14 @@ where
         let text_size = self.text_size.unwrap_or_else(|| renderer.default_size()).0;
         let font = self.font.unwrap_or_else(|| renderer.default_font());
 
-        let mut x = bounds.x + self.padding.left;
+        let mut x = bounds.x + padding.left;
         let last_index = state.bar_labels.len().saturating_sub(1);
         for (i, slot) in state.bar_labels.iter().enumerate() {
             let w = slot.paragraph.min_width();
             let label_bounds = Rectangle {
                 x,
                 y: bounds.y,
-                width: w + self.padding.left + self.padding.right,
+                width: w + padding.left + padding.right,
                 height: bounds.height,
             };
 
@@ -358,7 +387,7 @@ where
                     wrapping: text::Wrapping::None,
                 },
                 Point::new(
-                    label_bounds.x + self.padding.left,
+                    label_bounds.x + padding.left,
                     label_bounds.y + (label_bounds.height - text_size) / 2.0,
                 ),
                 text_color,
@@ -386,7 +415,8 @@ where
         let state = tree.state.downcast_mut::<State<Renderer::Paragraph>>();
         let bounds = layout.bounds();
         let spacing = state.spacing_cache.get();
-        let label_bounds = compute_bar_label_bounds(state, bounds, self.padding, spacing);
+        let padding = state.padding_cache.get();
+        let label_bounds = compute_bar_label_bounds(state, bounds, padding, spacing);
 
         match event {
             Event::Mouse(mouse::Event::CursorMoved { .. }) => {
@@ -443,7 +473,8 @@ where
         let state = tree.state.downcast_ref::<State<Renderer::Paragraph>>();
         let bounds = layout.bounds();
         let spacing = state.spacing_cache.get();
-        let label_bounds = compute_bar_label_bounds(state, bounds, self.padding, spacing);
+        let padding = state.padding_cache.get();
+        let label_bounds = compute_bar_label_bounds(state, bounds, padding, spacing);
 
         let Some(pos) = cursor.position() else {
             return mouse::Interaction::None;
@@ -470,11 +501,12 @@ where
 
         let bar_bounds = layout.bounds() + translation;
         let spacing = state.spacing_cache.get();
-        let bar_label_bounds = compute_bar_label_bounds(state, bar_bounds, self.padding, spacing);
+        let padding = state.padding_cache.get();
+        let bar_label_bounds = compute_bar_label_bounds(state, bar_bounds, padding, spacing);
 
         let text_size = self.text_size.unwrap_or_else(|| renderer.default_size()).0;
         let font = self.font.unwrap_or_else(|| renderer.default_font());
-        let metrics = Metrics::new(text_size, self.padding, spacing);
+        let metrics = Metrics::new(text_size, padding, spacing);
 
         let overlay = MenuOverlay {
             menus: &mut self.menus,
@@ -518,7 +550,7 @@ impl<'a, Message, Theme, Renderer> From<MenuBar<'a, Message, Theme, Renderer>>
     for Element<'a, Message, Theme, Renderer>
 where
     Message: Clone + 'a,
-    Theme: Catalog + 'a,
+    Theme: Catalog + SpacingBase + 'a,
     Renderer: text::Renderer<Font = Font> + 'a,
 {
     fn from(bar: MenuBar<'a, Message, Theme, Renderer>) -> Self {
