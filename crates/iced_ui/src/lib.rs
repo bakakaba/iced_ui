@@ -31,6 +31,7 @@ pub mod navigation_rail;
 pub mod segmented_button;
 pub mod snackbar;
 pub mod tabs;
+pub mod text;
 pub mod theme;
 pub mod top_app_bar;
 
@@ -51,5 +52,6 @@ pub use navigation_rail::NavigationRail;
 pub use segmented_button::{Segment, SegmentedButton};
 pub use snackbar::Snackbar;
 pub use tabs::Tabs;
+pub use text::Text;
 pub use theme::{FontSize, PaddingSource, Roundness, RoundnessBase, Space, SpacingBase, Theme};
 pub use top_app_bar::TopAppBar;

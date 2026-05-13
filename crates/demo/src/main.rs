@@ -10,6 +10,7 @@ use iced::widget::{Space, checkbox, column, container, pick_list, row, scrollabl
 use iced::{Color, Length, Subscription, Task};
 
 use iced_ui::Card;
+use iced_ui::Text;
 use iced_ui::Theme;
 use iced_ui::badge::Badge;
 use iced_ui::bottom_sheet::BottomSheet;
@@ -26,6 +27,7 @@ use iced_ui::navigation_rail::{self, NavigationRail};
 use iced_ui::segmented_button::{Segment, SegmentedButton};
 use iced_ui::snackbar::Snackbar;
 use iced_ui::tabs::{Tab, Tabs};
+use iced_ui::text::Text as UiText;
 use iced_ui::top_app_bar::TopAppBar;
 
 /// Convenience alias: every widget in the demo's tree is themed by
@@ -43,6 +45,10 @@ pub fn main() -> iced::Result {
 /// The pages available in the sidebar navigation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 enum Page {
+    // Showcase
+    #[default]
+    Overview,
+    // Widgets
     Badge,
     BottomSheet,
     Card,
@@ -52,7 +58,6 @@ enum Page {
     Fab,
     IconButton,
     List,
-    #[default]
     Menu,
     NavigationBar,
     NavigationDrawer,
@@ -60,11 +65,14 @@ enum Page {
     SegmentedButton,
     Snackbar,
     Tabs,
+    Text,
     TopAppBar,
 }
 
 impl Page {
-    const ALL: [Self; 17] = [
+    const SHOWCASE: &[Self] = &[Self::Overview];
+
+    const WIDGETS: &[Self] = &[
         Self::Badge,
         Self::BottomSheet,
         Self::Card,
@@ -81,11 +89,13 @@ impl Page {
         Self::SegmentedButton,
         Self::Snackbar,
         Self::Tabs,
+        Self::Text,
         Self::TopAppBar,
     ];
 
     fn label(self) -> &'static str {
         match self {
+            Self::Overview => "Overview",
             Self::Badge => "Badge",
             Self::BottomSheet => "BottomSheet",
             Self::Card => "Card",
@@ -102,6 +112,7 @@ impl Page {
             Self::SegmentedButton => "SegmentedButton",
             Self::Snackbar => "Snackbar",
             Self::Tabs => "Tabs",
+            Self::Text => "Text",
             Self::TopAppBar => "TopAppBar",
         }
     }
@@ -431,6 +442,7 @@ impl Demo {
 
     fn build_page_content(&self) -> Element<'_, Message> {
         match self.page {
+            Page::Overview => build_overview_page(),
             Page::Menu => build_menu_page(self),
             Page::Card => build_card_page(),
             Page::List => build_list_page(),
@@ -444,6 +456,7 @@ impl Demo {
             Page::Snackbar => build_snackbar_page(self),
             Page::BottomSheet => build_bottom_sheet_page(self),
             Page::Tabs => build_tabs_page(self),
+            Page::Text => build_text_page(),
             Page::TopAppBar => build_top_app_bar_page(),
             Page::NavigationRail => build_navigation_rail_page(),
             Page::NavigationBar => build_navigation_bar_page(),
@@ -461,14 +474,26 @@ impl Demo {
 fn build_nav_sidebar(current_page: Page) -> Element<'static, Message> {
     let mut nav_list = list::List::new();
 
-    for page in Page::ALL {
+    // Showcase section header
+    nav_list = nav_list.push(list::Item::new(Text::h4("Showcase")));
+    for &page in Page::SHOWCASE {
         let label = if page == current_page {
-            text(page.label()).size(13).color(Color::WHITE)
+            text(page.label()).color(Color::WHITE)
         } else {
-            text(page.label()).size(13)
+            text(page.label())
         };
-        let item = list::Item::new(label).on_press(Message::Navigate(page));
-        nav_list = nav_list.push(item);
+        nav_list = nav_list.push(list::Item::new(label).on_press(Message::Navigate(page)));
+    }
+
+    // Widgets section header
+    nav_list = nav_list.push(list::Item::new(Text::h4("Widgets")));
+    for &page in Page::WIDGETS {
+        let label = if page == current_page {
+            text(page.label()).color(Color::WHITE)
+        } else {
+            text(page.label())
+        };
+        nav_list = nav_list.push(list::Item::new(label).on_press(Message::Navigate(page)));
     }
 
     let nav_list = nav_list
@@ -500,6 +525,46 @@ fn nav_item_style(theme: &Theme, status: list::Status, _current_page: Page) -> l
 }
 
 // -- Page content builders --
+
+fn build_overview_page<'a>() -> Element<'a, Message> {
+    // Top app bar
+    let nav_icon: Element<'_, Message> = text("=").size(20).into();
+    let action: Element<'_, Message> = text("?").size(16).into();
+    let app_bar = TopAppBar::new("My App")
+        .navigation_icon(nav_icon)
+        .action(action);
+
+    // A card containing a list with badges
+    let inbox_item = Badge::count(text("Inbox").size(14), 3);
+    let updates_item = Badge::dot(text("Updates").size(14));
+    let items_list = list::List::new()
+        .push(list::Item::new(inbox_item))
+        .push(list::Item::new(updates_item))
+        .push(list::Item::new(text("Drafts").size(14)))
+        .push(list::Item::new(text("Sent").size(14)));
+
+    let mail_card = Card::new(column![text("Mailbox").size(18), items_list].spacing(8));
+
+    // A FAB
+    let fab = Fab::new(text("+").size(24))
+        .label(text("Compose").size(16))
+        .on_press(Message::Noop);
+
+    // Divider between sections
+    let divider = Divider::horizontal();
+
+    column![
+        text("Overview").size(20),
+        text("A composed layout demonstrating how iced_ui widgets work together.").size(14),
+        app_bar,
+        divider,
+        mail_card,
+        row![Space::new().width(Length::Fill), fab].padding(8),
+    ]
+    .spacing(16)
+    .padding(20)
+    .into()
+}
 
 fn build_menu_page<'a>(demo: &Demo) -> Element<'a, Message> {
     let status = match &demo.last_action {
@@ -810,6 +875,19 @@ fn build_tabs_page<'a>(demo: &Demo) -> Element<'a, Message> {
         text("Horizontal tab row with active indicator.").size(14),
         tabs,
         text(format!("Active tab: {}", demo.tab_active)).size(12),
+    ]
+    .spacing(16)
+    .padding(20)
+    .into()
+}
+
+fn build_text_page<'a>() -> Element<'a, Message> {
+    column![
+        UiText::h1("Heading 1"),
+        UiText::h2("Heading 2"),
+        UiText::h3("Heading 3"),
+        UiText::h4("Heading 4"),
+        UiText::h5("Heading 5"),
     ]
     .spacing(16)
     .padding(20)

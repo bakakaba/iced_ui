@@ -148,7 +148,7 @@ where
             items: Vec::new(),
             width: Length::Fill,
             height: Length::Shrink,
-            padding: PaddingSource::from(Space::sx(0.0)),
+            padding: PaddingSource::from(Space::sx(2.0)),
             item_padding: PaddingSource::from(Space::sx(2.0)),
             spacing: Space::sx(0.0),
             class: <Theme as Catalog>::default(),
@@ -174,7 +174,8 @@ where
         self
     }
 
-    /// Sets the outer padding of the [`List`]. Defaults to no padding.
+    /// Sets the outer padding of the [`List`]. Defaults to
+    /// [`Space::sx(2.0)`].
     pub fn padding(mut self, padding: impl Into<PaddingSource>) -> Self {
         self.padding = padding.into();
         self
