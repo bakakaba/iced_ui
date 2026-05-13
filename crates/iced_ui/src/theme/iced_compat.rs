@@ -12,7 +12,7 @@
 //! [`Theme::colors`]: crate::Theme::colors
 
 use iced::theme as iced_theme;
-use iced::widget::{checkbox, container, overlay, pick_list, scrollable, slider, text};
+use iced::widget::{button, checkbox, container, overlay, pick_list, scrollable, slider, text};
 
 use crate::Theme;
 
@@ -122,6 +122,18 @@ impl pick_list::Catalog for Theme {
         class: &<Self as pick_list::Catalog>::Class<'_>,
         status: pick_list::Status,
     ) -> pick_list::Style {
+        class(self, status)
+    }
+}
+
+impl button::Catalog for Theme {
+    type Class<'a> = button::StyleFn<'a, Theme>;
+
+    fn default<'a>() -> Self::Class<'a> {
+        Box::new(|theme: &Theme, status| button::primary(&theme.colors, status))
+    }
+
+    fn style(&self, class: &Self::Class<'_>, status: button::Status) -> button::Style {
         class(self, status)
     }
 }

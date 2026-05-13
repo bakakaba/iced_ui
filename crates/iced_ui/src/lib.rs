@@ -15,13 +15,41 @@
 
 #![warn(missing_docs)]
 
+pub mod badge;
+pub mod bottom_sheet;
 pub mod card;
+pub mod chip;
+pub mod dialog;
+pub mod divider;
+pub mod fab;
+pub mod icon_button;
 pub mod list;
 pub mod menu;
+pub mod navigation_bar;
+pub mod navigation_drawer;
+pub mod navigation_rail;
+pub mod segmented_button;
+pub mod snackbar;
+pub mod tabs;
 pub mod theme;
+pub mod top_app_bar;
 
+pub use badge::Badge;
+pub use bottom_sheet::BottomSheet;
 pub use card::{Card, Variant};
+pub use chip::Chip;
+pub use dialog::Dialog;
+pub use divider::Divider;
+pub use fab::Fab;
+pub use icon_button::IconButton;
 pub use menu::{
     Catalog, Icon, Item, KeyBinding, Menu, MenuBar, Separator, Style, StyleFn, default, shortcuts,
 };
+pub use navigation_bar::NavigationBar;
+pub use navigation_drawer::NavigationDrawer;
+pub use navigation_rail::NavigationRail;
+pub use segmented_button::{Segment, SegmentedButton};
+pub use snackbar::Snackbar;
+pub use tabs::Tabs;
 pub use theme::{FontSize, PaddingSource, Roundness, RoundnessBase, Space, SpacingBase, Theme};
+pub use top_app_bar::TopAppBar;

@@ -1,19 +1,7 @@
 //! Kitchen-sink demo for every `iced_ui` component.
 //!
-//! Currently showcases:
-//!
-//! - [`iced_ui::MenuBar`]: a horizontal menu bar with icons, keyboard
-//!   shortcuts, separators and nested submenus.
-//! - [`iced_ui::Card`]: a rounded-corner container with flat and
-//!   elevated variants and optional color / image backgrounds.
-//! - [`iced_ui::list::List`]: a vertical interactive list used here as
-//!   the sidebar navigation between component pages.
-//!
-//! The right-hand pane drives a live [`iced_ui::Theme`]: pick any
-//! built-in [`iced::Theme`] for the colors, optionally customize the
-//! palette per channel, and tweak the global roundness and spacing.
-//! Every change is reflected immediately across cards, the menu bar,
-//! and the settings pane itself.
+//! Each component page showcases its default appearance without
+//! overriding any theme-driven values (padding, spacing, roundness).
 
 use iced::advanced::image as advanced_image;
 use iced::advanced::svg as advanced_svg;
@@ -23,8 +11,22 @@ use iced::{Color, Length, Subscription, Task};
 
 use iced_ui::Card;
 use iced_ui::Theme;
+use iced_ui::badge::Badge;
+use iced_ui::bottom_sheet::BottomSheet;
+use iced_ui::chip::Chip;
+use iced_ui::dialog::Dialog;
+use iced_ui::divider::Divider;
+use iced_ui::fab::{Fab, FabSize};
+use iced_ui::icon_button::{self, IconButton};
 use iced_ui::list;
 use iced_ui::menu::{Icon, Item, KeyBinding, Menu, MenuBar, Separator};
+use iced_ui::navigation_bar::{self, NavigationBar};
+use iced_ui::navigation_drawer::{DrawerItem, NavigationDrawer};
+use iced_ui::navigation_rail::{self, NavigationRail};
+use iced_ui::segmented_button::{Segment, SegmentedButton};
+use iced_ui::snackbar::Snackbar;
+use iced_ui::tabs::{Tab, Tabs};
+use iced_ui::top_app_bar::TopAppBar;
 
 /// Convenience alias: every widget in the demo's tree is themed by
 /// `iced_ui::Theme`.
@@ -41,20 +43,66 @@ pub fn main() -> iced::Result {
 /// The pages available in the sidebar navigation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 enum Page {
+    Badge,
+    BottomSheet,
+    Card,
+    Chip,
+    Dialog,
+    Divider,
+    Fab,
+    IconButton,
+    List,
     #[default]
     Menu,
-    Card,
-    List,
+    NavigationBar,
+    NavigationDrawer,
+    NavigationRail,
+    SegmentedButton,
+    Snackbar,
+    Tabs,
+    TopAppBar,
 }
 
 impl Page {
-    const ALL: [Self; 3] = [Self::Menu, Self::Card, Self::List];
+    const ALL: [Self; 17] = [
+        Self::Badge,
+        Self::BottomSheet,
+        Self::Card,
+        Self::Chip,
+        Self::Dialog,
+        Self::Divider,
+        Self::Fab,
+        Self::IconButton,
+        Self::List,
+        Self::Menu,
+        Self::NavigationBar,
+        Self::NavigationDrawer,
+        Self::NavigationRail,
+        Self::SegmentedButton,
+        Self::Snackbar,
+        Self::Tabs,
+        Self::TopAppBar,
+    ];
 
     fn label(self) -> &'static str {
         match self {
-            Self::Menu => "MenuBar",
+            Self::Badge => "Badge",
+            Self::BottomSheet => "BottomSheet",
             Self::Card => "Card",
+            Self::Chip => "Chip",
+            Self::Dialog => "Dialog",
+            Self::Divider => "Divider",
+            Self::Fab => "FAB",
+            Self::IconButton => "IconButton",
             Self::List => "List",
+            Self::Menu => "MenuBar",
+            Self::NavigationBar => "NavigationBar",
+            Self::NavigationDrawer => "NavDrawer",
+            Self::NavigationRail => "NavigationRail",
+            Self::SegmentedButton => "SegmentedButton",
+            Self::Snackbar => "Snackbar",
+            Self::Tabs => "Tabs",
+            Self::TopAppBar => "TopAppBar",
         }
     }
 }
@@ -63,20 +111,21 @@ impl Page {
 struct Demo {
     counter: u32,
     last_action: Option<String>,
-    /// The active `iced_ui::Theme`. Drives every widget in the tree.
     theme: Theme,
-    /// Which built-in iced theme is currently selected in the dropdown.
-    /// Kept separate so that toggling "Customize palette" off restores
-    /// the user's last built-in choice.
     selected_iced: iced::Theme,
     sidebar_visible: bool,
     customize_palette: bool,
-    /// The palette currently driven by the per-channel sliders. Used
-    /// to build a [`iced::Theme::custom`] when `customize_palette` is
-    /// `true`.
     custom_palette: Palette,
-    /// The currently active page in the navigation.
     page: Page,
+    // State for interactive demos
+    icon_btn_toggled: bool,
+    chip_selected: bool,
+    segment_selected: usize,
+    dialog_open: bool,
+    snackbar_visible: bool,
+    bottom_sheet_expanded: bool,
+    tab_active: usize,
+    drawer_expanded: bool,
 }
 
 impl Default for Demo {
@@ -92,6 +141,14 @@ impl Default for Demo {
             customize_palette: false,
             custom_palette,
             page: Page::default(),
+            icon_btn_toggled: false,
+            chip_selected: false,
+            segment_selected: 0,
+            dialog_open: false,
+            snackbar_visible: false,
+            bottom_sheet_expanded: false,
+            tab_active: 0,
+            drawer_expanded: false,
         }
     }
 }
@@ -191,18 +248,15 @@ enum Action {
     Save,
     SaveAs,
     Quit,
-
     Undo,
     Redo,
     Cut,
     Copy,
     Paste,
-
     ZoomIn,
     ZoomOut,
     ZoomReset,
     ToggleSidebar,
-
     About,
 }
 
@@ -219,6 +273,23 @@ enum Message {
     RoundnessChanged(u8),
     SpacingChanged(u8),
     Navigate(Page),
+    // Interactive demo messages
+    IconButtonToggled,
+    ChipToggled,
+    SegmentSelected(usize),
+    OpenDialog,
+    CloseDialog,
+    DialogConfirmed,
+    ShowSnackbar,
+    HideSnackbar,
+    ToggleBottomSheet,
+    CloseBottomSheet,
+    TabSelected(usize),
+    ToggleDrawer,
+    CloseDrawer,
+    DrawerItemSelected(usize),
+    FabPressed,
+    Noop,
 }
 
 impl Demo {
@@ -232,9 +303,6 @@ impl Demo {
                 }
             }
             Message::ThemeSelected(iced_theme) => {
-                // Seed the custom palette from the freshly selected
-                // built-in so toggling "Customize palette" later starts
-                // from a familiar place.
                 self.custom_palette = iced_theme.palette();
                 self.selected_iced = iced_theme;
                 self.refresh_colors();
@@ -267,13 +335,54 @@ impl Demo {
             Message::Navigate(page) => {
                 self.page = page;
             }
+            Message::IconButtonToggled => {
+                self.icon_btn_toggled = !self.icon_btn_toggled;
+            }
+            Message::ChipToggled => {
+                self.chip_selected = !self.chip_selected;
+            }
+            Message::SegmentSelected(idx) => {
+                self.segment_selected = idx;
+            }
+            Message::OpenDialog => {
+                self.dialog_open = true;
+            }
+            Message::CloseDialog | Message::DialogConfirmed => {
+                self.dialog_open = false;
+            }
+            Message::ShowSnackbar => {
+                self.snackbar_visible = true;
+            }
+            Message::HideSnackbar => {
+                self.snackbar_visible = false;
+            }
+            Message::ToggleBottomSheet => {
+                self.bottom_sheet_expanded = !self.bottom_sheet_expanded;
+            }
+            Message::CloseBottomSheet => {
+                self.bottom_sheet_expanded = false;
+            }
+            Message::TabSelected(idx) => {
+                self.tab_active = idx;
+            }
+            Message::ToggleDrawer => {
+                self.drawer_expanded = !self.drawer_expanded;
+            }
+            Message::CloseDrawer => {
+                self.drawer_expanded = false;
+            }
+            Message::DrawerItemSelected(idx) => {
+                self.last_action = Some(format!("Drawer item {idx}"));
+                self.drawer_expanded = false;
+            }
+            Message::FabPressed => {
+                self.last_action = Some("FAB pressed".to_string());
+            }
+            Message::Noop => {}
         }
         Task::none()
     }
 
-    /// Recomputes [`Theme::colors`] from the dropdown selection and the
-    /// "Customize palette" toggle. Roundness and spacing bases are
-    /// preserved.
     fn refresh_colors(&mut self) {
         self.theme.colors = if self.customize_palette {
             iced::Theme::custom("Custom".to_string(), self.custom_palette)
@@ -289,15 +398,12 @@ impl Demo {
     fn view(&self) -> Element<'_, Message> {
         let menu_bar = build_menu_bar(self.sidebar_visible);
 
-        // -- Navigation sidebar (left) --
         let nav = build_nav_sidebar(self.page);
 
-        // -- Main content area --
         let body = container(scrollable(self.build_page_content()))
             .width(Length::Fill)
             .height(Length::Fill);
 
-        // -- Settings pane (right) --
         let main_row: Element<'_, Message> = if self.sidebar_visible {
             row![nav, body, build_settings_pane(self)]
                 .height(Length::Fill)
@@ -306,10 +412,21 @@ impl Demo {
             row![nav, body].height(Length::Fill).into()
         };
 
-        column![menu_bar, main_row]
+        let content: Element<'_, Message> = column![menu_bar, main_row]
             .width(Length::Fill)
             .height(Length::Fill)
-            .into()
+            .into();
+
+        // Wrap in Dialog if needed
+        let content = Dialog::new(content)
+            .title("Confirm Action")
+            .body("Are you sure you want to proceed? This action cannot be undone.")
+            .confirm("Confirm", Message::DialogConfirmed)
+            .dismiss("Cancel", Message::CloseDialog)
+            .on_scrim_press(Message::CloseDialog)
+            .open(self.dialog_open);
+
+        content.into()
     }
 
     fn build_page_content(&self) -> Element<'_, Message> {
@@ -317,6 +434,20 @@ impl Demo {
             Page::Menu => build_menu_page(self),
             Page::Card => build_card_page(),
             Page::List => build_list_page(),
+            Page::Divider => build_divider_page(),
+            Page::Badge => build_badge_page(),
+            Page::IconButton => build_icon_button_page(self),
+            Page::Fab => build_fab_page(),
+            Page::Chip => build_chip_page(self),
+            Page::SegmentedButton => build_segmented_button_page(self),
+            Page::Dialog => build_dialog_page(),
+            Page::Snackbar => build_snackbar_page(self),
+            Page::BottomSheet => build_bottom_sheet_page(self),
+            Page::Tabs => build_tabs_page(self),
+            Page::TopAppBar => build_top_app_bar_page(),
+            Page::NavigationRail => build_navigation_rail_page(),
+            Page::NavigationBar => build_navigation_bar_page(),
+            Page::NavigationDrawer => build_navigation_drawer_page(self),
         }
     }
 
@@ -332,26 +463,23 @@ fn build_nav_sidebar(current_page: Page) -> Element<'static, Message> {
 
     for page in Page::ALL {
         let label = if page == current_page {
-            text(page.label()).size(14).color(Color::WHITE)
+            text(page.label()).size(13).color(Color::WHITE)
         } else {
-            text(page.label()).size(14)
+            text(page.label()).size(13)
         };
         let item = list::Item::new(label).on_press(Message::Navigate(page));
         nav_list = nav_list.push(item);
     }
 
     let nav_list = nav_list
-        .width(Length::Fixed(160.0))
+        .width(Length::Fixed(140.0))
         .style(move |theme: &Theme, status| nav_item_style(theme, status, current_page));
 
-    container(nav_list).height(Length::Fill).into()
+    container(scrollable(nav_list)).height(Length::Fill).into()
 }
 
-/// Custom item style for the navigation sidebar. Highlights the active
-/// page with the primary color.
 fn nav_item_style(theme: &Theme, status: list::Status, _current_page: Page) -> list::ItemStyle {
     let palette = theme.extended_palette();
-
     match status {
         list::Status::Active => list::ItemStyle {
             background: None,
@@ -394,10 +522,63 @@ fn build_menu_page<'a>(demo: &Demo) -> Element<'a, Message> {
 }
 
 fn build_card_page<'a>() -> Element<'a, Message> {
-    column![text("Card").size(20), build_card_showcase(),]
-        .spacing(16)
-        .padding(20)
-        .into()
+    let flat_card = Card::new(
+        column![
+            text("Flat").size(18),
+            text("Bordered frame with no shadow.").size(14),
+        ]
+        .spacing(6),
+    )
+    .width(Length::Fixed(220.0));
+
+    let elevated_card = Card::new(
+        column![
+            text("Elevated").size(18),
+            text("Drop shadow, no border.").size(14),
+        ]
+        .spacing(6),
+    )
+    .width(Length::Fixed(220.0))
+    .elevated();
+
+    let raster_card = Card::new(
+        column![
+            Space::new().height(Length::Fixed(40.0)),
+            text("Raster image").size(18).color(Color::WHITE),
+            text("Rounded corners clip the image.")
+                .size(14)
+                .color(Color::WHITE),
+        ]
+        .spacing(6),
+    )
+    .width(Length::Fixed(220.0))
+    .height(Length::Fixed(140.0))
+    .background_image(checker_handle());
+
+    let svg_card = Card::new(
+        column![
+            Space::new().height(Length::Fixed(40.0)),
+            text("SVG image").size(18).color(Color::WHITE),
+            text("Vector backgrounds supported.")
+                .size(14)
+                .color(Color::WHITE),
+        ]
+        .spacing(6),
+    )
+    .width(Length::Fixed(220.0))
+    .height(Length::Fixed(140.0))
+    .elevated()
+    .background_svg(gradient_svg_handle());
+
+    column![
+        text("Card").size(20),
+        row![flat_card, elevated_card, raster_card, svg_card]
+            .spacing(16)
+            .wrap(),
+    ]
+    .spacing(16)
+    .padding(20)
+    .into()
 }
 
 fn build_list_page<'a>() -> Element<'a, Message> {
@@ -417,6 +598,310 @@ fn build_list_page<'a>() -> Element<'a, Message> {
     .spacing(16)
     .padding(20)
     .into()
+}
+
+fn build_divider_page<'a>() -> Element<'a, Message> {
+    column![
+        text("Divider").size(20),
+        text("Horizontal and vertical separators with optional insets.").size(14),
+        text("Full width:").size(14),
+        Divider::horizontal(),
+        text("With inset:").size(14),
+        Divider::horizontal().inset(iced_ui::Space::sx(4.0)),
+        row![
+            text("Vertical:").size(14),
+            Divider::vertical(),
+            text("Between content").size(14),
+        ]
+        .spacing(8)
+        .height(Length::Fixed(40.0)),
+    ]
+    .spacing(12)
+    .padding(20)
+    .into()
+}
+
+fn build_badge_page<'a>() -> Element<'a, Message> {
+    let dot_badge = Badge::dot(text("Mail").size(16));
+    let count_badge = Badge::count(text("Inbox").size(16), 5);
+    let large_count = Badge::count(text("Notifications").size(16), 1234).max(999);
+
+    column![
+        text("Badge").size(20),
+        text("Small dot or count indicator overlaid on content.").size(14),
+        row![dot_badge, count_badge, large_count].spacing(32),
+    ]
+    .spacing(16)
+    .padding(20)
+    .into()
+}
+
+fn build_icon_button_page<'a>(demo: &Demo) -> Element<'a, Message> {
+    let standard = IconButton::new(text("X").size(18)).on_press(Message::Noop);
+
+    let filled = IconButton::new(text("+").size(18))
+        .variant(icon_button::Variant::Filled)
+        .on_press(Message::Noop);
+
+    let tonal = IconButton::new(text("?").size(18))
+        .variant(icon_button::Variant::FilledTonal)
+        .on_press(Message::Noop);
+
+    let outlined = IconButton::new(text("!").size(18))
+        .variant(icon_button::Variant::Outlined)
+        .on_press(Message::Noop);
+
+    let toggle = IconButton::new(text("*").size(18))
+        .variant(icon_button::Variant::Filled)
+        .toggled(demo.icon_btn_toggled)
+        .on_press(Message::IconButtonToggled);
+
+    column![
+        text("IconButton").size(20),
+        text("Four variants: Standard, Filled, Filled Tonal, Outlined. Supports toggle.").size(14),
+        row![standard, filled, tonal, outlined, toggle].spacing(16),
+        text(format!("Toggle state: {}", demo.icon_btn_toggled)).size(12),
+    ]
+    .spacing(16)
+    .padding(20)
+    .into()
+}
+
+fn build_fab_page<'a>() -> Element<'a, Message> {
+    let small_fab = Fab::new(text("+").size(18))
+        .size(FabSize::Small)
+        .on_press(Message::FabPressed);
+
+    let regular_fab = Fab::new(text("+").size(24)).on_press(Message::FabPressed);
+
+    let large_fab = Fab::new(text("+").size(36))
+        .size(FabSize::Large)
+        .on_press(Message::FabPressed);
+
+    let extended_fab = Fab::new(text("+").size(18))
+        .label(text("Create").size(16))
+        .on_press(Message::FabPressed);
+
+    let lowered_fab = Fab::new(text("+").size(24))
+        .lowered()
+        .on_press(Message::FabPressed);
+
+    column![
+        text("FAB (Floating Action Button)").size(20),
+        text("Small, Regular, Large, Extended, and Lowered variants.").size(14),
+        row![small_fab, regular_fab, large_fab, extended_fab, lowered_fab].spacing(16),
+    ]
+    .spacing(16)
+    .padding(20)
+    .into()
+}
+
+fn build_chip_page<'a>(demo: &Demo) -> Element<'a, Message> {
+    let assist = Chip::assist(text("Add event").size(14)).on_press(Message::Noop);
+
+    let filter = Chip::filter(text("Vegetarian").size(14))
+        .selected(demo.chip_selected)
+        .on_press(Message::ChipToggled);
+
+    let input = Chip::input(text("John Doe").size(14))
+        .on_press(Message::Noop)
+        .on_close(Message::Noop);
+
+    let suggestion = Chip::suggestion(text("Quick reply").size(14)).on_press(Message::Noop);
+
+    column![
+        text("Chip").size(20),
+        text("Assist, Filter, Input, Suggestion variants.").size(14),
+        row![assist, filter, input, suggestion].spacing(12),
+        text(format!("Filter chip selected: {}", demo.chip_selected)).size(12),
+    ]
+    .spacing(16)
+    .padding(20)
+    .into()
+}
+
+fn build_segmented_button_page<'a>(demo: &Demo) -> Element<'a, Message> {
+    let segmented = SegmentedButton::new()
+        .push(Segment::new(text("Day")), demo.segment_selected == 0)
+        .push(Segment::new(text("Week")), demo.segment_selected == 1)
+        .push(Segment::new(text("Month")), demo.segment_selected == 2)
+        .on_press(Message::SegmentSelected);
+
+    column![
+        text("Segmented Button").size(20),
+        text("Single-select toggle group with shared border.").size(14),
+        segmented,
+        text(format!("Selected: {}", demo.segment_selected)).size(12),
+    ]
+    .spacing(16)
+    .padding(20)
+    .into()
+}
+
+fn build_dialog_page<'a>() -> Element<'a, Message> {
+    column![
+        text("Dialog").size(20),
+        text("Modal overlay with scrim, title, body, and action buttons.").size(14),
+        text("Press the button below to open a dialog:").size(14),
+        IconButton::new(text("Open Dialog").size(14))
+            .variant(icon_button::Variant::Filled)
+            .size(120.0)
+            .on_press(Message::OpenDialog),
+    ]
+    .spacing(16)
+    .padding(20)
+    .into()
+}
+
+fn build_snackbar_page<'a>(demo: &Demo) -> Element<'a, Message> {
+    let host_content: Element<'_, Message> = column![
+        text("Snackbar").size(20),
+        text("Temporary notification bar at the bottom of the host.").size(14),
+        IconButton::new(text("Show Snackbar").size(14))
+            .variant(icon_button::Variant::Filled)
+            .size(140.0)
+            .on_press(Message::ShowSnackbar),
+    ]
+    .spacing(16)
+    .padding(20)
+    .into();
+
+    Snackbar::new(host_content)
+        .message("Item has been archived.")
+        .action("Undo", Message::HideSnackbar)
+        .on_dismiss(Message::HideSnackbar)
+        .visible(demo.snackbar_visible)
+        .into()
+}
+
+fn build_bottom_sheet_page<'a>(demo: &Demo) -> Element<'a, Message> {
+    let host_content: Element<'_, Message> = column![
+        text("Bottom Sheet").size(20),
+        text("A panel sliding from the bottom. Modal or standard.").size(14),
+        IconButton::new(text("Toggle Sheet").size(14))
+            .variant(icon_button::Variant::Filled)
+            .size(140.0)
+            .on_press(Message::ToggleBottomSheet),
+    ]
+    .spacing(16)
+    .padding(20)
+    .into();
+
+    BottomSheet::new(
+        host_content,
+        "This is the bottom sheet content. It slides up from the bottom of the screen.",
+    )
+    .modal(true)
+    .expanded(demo.bottom_sheet_expanded)
+    .on_dismiss(Message::CloseBottomSheet)
+    .drag_handle(true)
+    .into()
+}
+
+fn build_tabs_page<'a>(demo: &Demo) -> Element<'a, Message> {
+    let tabs = Tabs::new(Message::TabSelected)
+        .push(Tab::new("Photos"))
+        .push(Tab::new("Videos"))
+        .push(Tab::new("Music"))
+        .active(demo.tab_active);
+
+    column![
+        text("Tabs").size(20),
+        text("Horizontal tab row with active indicator.").size(14),
+        tabs,
+        text(format!("Active tab: {}", demo.tab_active)).size(12),
+    ]
+    .spacing(16)
+    .padding(20)
+    .into()
+}
+
+fn build_top_app_bar_page<'a>() -> Element<'a, Message> {
+    let nav_icon: Element<'_, Message> = text("<").size(20).into();
+    let action1: Element<'_, Message> = text("S").size(16).into();
+    let action2: Element<'_, Message> = text("?").size(16).into();
+
+    let app_bar = TopAppBar::new("Page Title")
+        .navigation_icon(nav_icon)
+        .action(action1)
+        .action(action2);
+
+    column![
+        text("Top App Bar").size(20),
+        text("Title bar with navigation icon, title, and action icons.").size(14),
+        app_bar,
+    ]
+    .spacing(16)
+    .padding(20)
+    .into()
+}
+
+fn build_navigation_rail_page<'a>() -> Element<'a, Message> {
+    let rail = NavigationRail::new(|_idx| Message::Noop)
+        .push(navigation_rail::Destination::new("Home"))
+        .push(navigation_rail::Destination::new("Search"))
+        .push(navigation_rail::Destination::new("Library"))
+        .push(navigation_rail::Destination::new("Settings"))
+        .active(0);
+
+    column![
+        text("Navigation Rail").size(20),
+        text("Vertical icon+label destinations for desktop/tablet.").size(14),
+        container(rail).height(Length::Fixed(300.0)),
+    ]
+    .spacing(16)
+    .padding(20)
+    .into()
+}
+
+fn build_navigation_bar_page<'a>() -> Element<'a, Message> {
+    let bar = NavigationBar::new(|_idx| Message::Noop)
+        .push(navigation_bar::Destination::new("Home"))
+        .push(navigation_bar::Destination::new("Search"))
+        .push(navigation_bar::Destination::new("Profile"))
+        .active(0);
+
+    column![
+        text("Navigation Bar").size(20),
+        text("Bottom bar with 3-5 icon+label destinations.").size(14),
+        bar,
+    ]
+    .spacing(16)
+    .padding(20)
+    .into()
+}
+
+fn build_navigation_drawer_page<'a>(demo: &Demo) -> Element<'a, Message> {
+    let host: Element<'_, Message> = column![
+        text("Navigation Drawer").size(20),
+        text("Side panel with destinations. Modal with scrim.").size(14),
+        IconButton::new(text("Toggle Drawer").size(14))
+            .variant(icon_button::Variant::Filled)
+            .size(140.0)
+            .on_press(Message::ToggleDrawer),
+        if let Some(last) = &demo.last_action {
+            text(format!("Last: {last}")).size(12)
+        } else {
+            text("").size(12)
+        },
+    ]
+    .spacing(16)
+    .padding(20)
+    .into();
+
+    NavigationDrawer::new(host)
+        .push(DrawerItem::header("Navigation"))
+        .push(DrawerItem::destination("Home"))
+        .push(DrawerItem::destination("Profile"))
+        .push(DrawerItem::destination("Settings"))
+        .push(DrawerItem::divider())
+        .push(DrawerItem::destination("Help"))
+        .active(0)
+        .modal(true)
+        .expanded(demo.drawer_expanded)
+        .on_dismiss(Message::CloseDrawer)
+        .on_select(Message::DrawerItemSelected)
+        .into()
 }
 
 // -- Menu bar --
@@ -471,7 +956,7 @@ fn build_settings_pane(demo: &Demo) -> Element<'_, Message> {
     ));
 
     let pane = Card::new(scrollable(content.padding(4)))
-        .width(Length::Fixed(280.0))
+        .width(Length::Fixed(260.0))
         .height(Length::Fill)
         .padding(iced_ui::Space::sx(4.0))
         .elevated();
@@ -504,14 +989,14 @@ fn palette_field_row<'a>(field: PaletteField, palette: Palette) -> Element<'a, M
     let swatch = container(Space::new())
         .width(Length::Fixed(20.0))
         .height(Length::Fixed(20.0))
-        .style(move |_theme| container::Style {
+        .style(move |_theme| iced::widget::container::Style {
             background: Some(iced::Background::Color(color)),
             border: iced::Border {
                 color: Color::from_rgba(0.0, 0.0, 0.0, 0.4),
                 width: 1.0,
                 radius: 4.0.into(),
             },
-            ..container::Style::default()
+            ..iced::widget::container::Style::default()
         });
 
     let header = row![
@@ -543,78 +1028,8 @@ fn palette_field_row<'a>(field: PaletteField, palette: Palette) -> Element<'a, M
     group.into()
 }
 
-// -- Card showcase --
+// -- Card showcase helpers --
 
-fn build_card_showcase<'a>() -> Element<'a, Message> {
-    let flat_card = Card::new(
-        column![
-            text("Flat").size(18),
-            text("Bordered frame with no shadow. This is the default variant.").size(14),
-        ]
-        .spacing(6),
-    )
-    .width(Length::Fixed(220.0));
-
-    let elevated_card = Card::new(
-        column![
-            text("Elevated").size(18),
-            text("Drop shadow, no border. Great for floating surfaces.").size(14),
-        ]
-        .spacing(6),
-    )
-    .width(Length::Fixed(220.0))
-    .elevated();
-
-    let tinted_card = Card::new(
-        column![
-            text("Tinted background").size(18).color(Color::WHITE),
-            text("Background color overrides the theme default.")
-                .size(14)
-                .color(Color::WHITE),
-        ]
-        .spacing(6),
-    )
-    .width(Length::Fixed(220.0))
-    .elevated()
-    .background(iced::Color::from_rgb(0.18, 0.33, 0.62));
-
-    let raster_card = Card::new(
-        column![
-            Space::new().height(Length::Fixed(40.0)),
-            text("Raster image").size(18).color(Color::WHITE),
-            text("Rounded corners clip the image.")
-                .size(14)
-                .color(Color::WHITE),
-        ]
-        .spacing(6),
-    )
-    .width(Length::Fixed(220.0))
-    .height(Length::Fixed(140.0))
-    .background_image(checker_handle());
-
-    let svg_card = Card::new(
-        column![
-            Space::new().height(Length::Fixed(40.0)),
-            text("SVG image").size(18).color(Color::WHITE),
-            text("Vector backgrounds are supported too.")
-                .size(14)
-                .color(Color::WHITE),
-        ]
-        .spacing(6),
-    )
-    .width(Length::Fixed(220.0))
-    .height(Length::Fixed(140.0))
-    .elevated()
-    .background_svg(gradient_svg_handle());
-
-    row![flat_card, elevated_card, tinted_card, raster_card, svg_card]
-        .spacing(16)
-        .wrap()
-        .into()
-}
-
-/// Generates a small procedural checker-pattern raster image so the
-/// demo does not need to ship binary assets.
 fn checker_handle() -> advanced_image::Handle {
     const W: u32 = 64;
     const H: u32 = 64;
@@ -633,7 +1048,6 @@ fn checker_handle() -> advanced_image::Handle {
     advanced_image::Handle::from_rgba(W, H, pixels)
 }
 
-/// Inline SVG handle used by the SVG demo card.
 fn gradient_svg_handle() -> advanced_svg::Handle {
     const SVG: &[u8] = br##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 120" preserveAspectRatio="none">
   <defs>
@@ -665,7 +1079,7 @@ fn file_menu() -> Menu<Message> {
                 .on_press(Message::Triggered(Action::New)),
         )
         .push(
-            Item::new("Open…")
+            Item::new("Open\u{2026}")
                 .icon(Icon::from_text("O"))
                 .shortcut(KeyBinding::command('o'))
                 .on_press(Message::Triggered(Action::Open)),
@@ -678,7 +1092,7 @@ fn file_menu() -> Menu<Message> {
                 .on_press(Message::Triggered(Action::Save)),
         )
         .push(
-            Item::new("Save As…")
+            Item::new("Save As\u{2026}")
                 .shortcut(KeyBinding::command('s').shift())
                 .on_press(Message::Triggered(Action::SaveAs)),
         )
