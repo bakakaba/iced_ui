@@ -168,6 +168,6 @@ invocations; consult the justfile for the exact commands.
 
 ## Conventions
 
-- Member crates inherit `version`, `license`, `repository`, and `edition` from the workspace via `workspace.package`. All workspace members share a single version number; release-please bumps it based on conventional commits and propagates the change to every crate at once.
+- Member crates inherit `license`, `repository`, and `edition` from the workspace via `workspace.package`. All workspace members share a single version number managed by release-please's `linked-versions` plugin, which bumps every crate atomically based on conventional commits.
 - Public API items in `iced_ui` should be documented; run
   `cargo doc -p iced_ui` locally when adding public surface.
