@@ -17,6 +17,25 @@
 //! Snapshots are namespaced per backend by `iced_test`; the file name
 //! ends in `-tiny-skia.png` or `-wgpu.png` automatically, so reference
 //! images for both backends can coexist.
+//!
+//! ## Bundled fonts
+//!
+//! `iced_test` only ships `FiraSans-Regular.ttf`, which is enough for
+//! widgets that ask the renderer for `default_font()` (those resolve
+//! to the named "Fira Sans" face and render deterministically). But
+//! widgets like [`iced_ui::Text`] explicitly request a bold weight via
+//! the generic [`iced::Font`]`{ family: SansSerif, weight: Bold, .. }`
+//! descriptor, which causes the underlying `cosmic_text` font system
+//! to fall back to whatever sans-serif bold face the host happens to
+//! have installed — non-deterministic across CI runners and dev
+//! machines.
+//!
+//! To make those snapshots reproducible, this crate bundles
+//! `FiraSans-Bold.ttf` (SIL Open Font License) under `fonts/` and
+//! preloads it into every [`Simulator`] built with [`build`]. With a
+//! bundled bold face available, the font system always selects it for
+//! sans-serif bold requests and tests are byte-identical regardless of
+//! the host environment.
 
 use std::path::PathBuf;
 
@@ -27,6 +46,10 @@ use iced_ui::Theme;
 /// Convenience alias for an `iced::Element` already typed against the
 /// `iced_ui::Theme` used in tests.
 pub type Element<'a, Message, Theme = iced_ui::Theme> = IcedElement<'a, Message, Theme>;
+
+/// Bold variant of Fira Sans, bundled to make sans-serif bold
+/// rendering deterministic across environments.
+const FIRA_SANS_BOLD: &[u8] = include_bytes!("../fonts/FiraSans-Bold.ttf");
 
 /// Default canvas size used by widget snapshots.
 pub const DEFAULT_SIZE: (u32, u32) = (320, 240);
@@ -44,6 +67,15 @@ pub fn theme() -> Theme {
     Theme::from(IcedTheme::Light)
 }
 
+/// Returns the `Settings` used by every test, with the bundled bold
+/// font preloaded so sans-serif bold renders deterministically.
+fn settings() -> Settings {
+    Settings {
+        fonts: vec![FIRA_SANS_BOLD.into()],
+        ..Settings::default()
+    }
+}
+
 /// Build a `Simulator` for the supplied widget element with the given
 /// canvas size.
 pub fn build<'a, Message>(
@@ -54,7 +86,7 @@ where
     Message: 'a,
 {
     Simulator::with_size(
-        Settings::default(),
+        settings(),
         iced::Size::new(width as f32, height as f32),
         element,
     )

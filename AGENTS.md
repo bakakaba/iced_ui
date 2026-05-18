@@ -82,6 +82,22 @@ Reference images are stored under
 `<test_name>-tiny-skia.png`. The `-tiny-skia` suffix is appended
 automatically by `iced_test` based on the active renderer.
 
+### Bundled fonts
+
+`iced_test` only ships `FiraSans-Regular.ttf`, which is enough for
+widgets that ask the renderer for `default_font()`. Widgets that
+explicitly request a different weight (e.g. `iced_ui::Text` asks for
+`Weight::Bold`) would otherwise fall back to whatever sans-serif
+bold face the host happens to have installed — non-deterministic
+across CI runners and dev machines.
+
+To make those snapshots reproducible, the `iced_ui_tests` crate
+bundles `FiraSans-Bold.ttf` (SIL Open Font License) under
+`crates/iced_ui_tests/fonts/` and preloads it into every
+`Simulator` via `Settings::fonts`. If a future widget requests
+another weight or family that's not part of the bundled set, add
+the corresponding font file under `fonts/` and load it the same way.
+
 ### Authoring snapshot tests
 
 Each widget gets its own integration-test file under
