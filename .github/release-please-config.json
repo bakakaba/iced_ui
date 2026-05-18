@@ -3,13 +3,27 @@
   "release-type": "rust",
   "bump-minor-pre-major": true,
   "bump-patch-for-minor-pre-major": true,
-  "plugins": ["cargo-workspace"],
+  "plugins": [
+    "cargo-workspace",
+    {
+      "type": "linked-versions",
+      "groupName": "iced_ui workspace",
+      "components": ["iced_ui", "demo", "iced_ui_tests"]
+    }
+  ],
   "packages": {
     "crates/iced_ui": {
-      "package-name": "iced_ui"
+      "package-name": "iced_ui",
+      "component": "iced_ui"
     },
     "crates/demo": {
       "package-name": "demo",
+      "component": "demo",
+      "skip-github-release": true
+    },
+    "crates/iced_ui_tests": {
+      "package-name": "iced_ui_tests",
+      "component": "iced_ui_tests",
       "skip-github-release": true
     }
   }
