@@ -9,9 +9,9 @@ dev:
 build:
     cargo build --workspace
 
-# Run all tests
+# Run all tests (uses tiny-skia for deterministic, GPU-free snapshots)
 test:
-    cargo test --workspace
+    ICED_TEST_BACKEND=tiny-skia cargo test --workspace
 
 lint:
     cargo fmt --all -- --check
