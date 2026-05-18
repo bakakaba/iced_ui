@@ -4,13 +4,15 @@ use iced::{Color, Length, Subscription, Task};
 
 use iced_ui::Theme;
 use iced_ui::card::Card;
+use iced_ui::color_picker::ColorPicker;
 use iced_ui::dialog::Dialog;
 use iced_ui::list;
 use iced_ui::menu::{Icon, Item, KeyBinding, Menu, MenuBar, Separator};
 use iced_ui::text::Text;
+use iced_ui::theme::tokens::Information;
 
 use crate::Element;
-use crate::message::{Action, Channel, Message, PaletteField};
+use crate::message::{Action, Message, PaletteField};
 use crate::pages::{self, Page};
 
 #[derive(Debug)]
@@ -22,6 +24,7 @@ pub(crate) struct Demo {
     pub(crate) sidebar_visible: bool,
     pub(crate) customize_palette: bool,
     pub(crate) custom_palette: Palette,
+    pub(crate) information_color: Color,
     pub(crate) page: Page,
     // State for interactive demos
     pub(crate) icon_btn_toggled: bool,
@@ -32,12 +35,14 @@ pub(crate) struct Demo {
     pub(crate) bottom_sheet_expanded: bool,
     pub(crate) tab_active: usize,
     pub(crate) drawer_expanded: bool,
+    pub(crate) picker_color: Color,
 }
 
 impl Default for Demo {
     fn default() -> Self {
         let selected_iced = iced::Theme::Dark;
         let custom_palette = selected_iced.palette();
+        let information_color = Information::default_base(custom_palette.background);
         Self {
             counter: 0,
             last_action: None,
@@ -46,6 +51,7 @@ impl Default for Demo {
             sidebar_visible: true,
             customize_palette: false,
             custom_palette,
+            information_color,
             page: Page::default(),
             icon_btn_toggled: false,
             chip_selected: false,
@@ -55,6 +61,7 @@ impl Default for Demo {
             bottom_sheet_expanded: false,
             tab_active: 0,
             drawer_expanded: false,
+            picker_color: Color::from_rgb(0.2, 0.6, 1.0),
         }
     }
 }
@@ -71,6 +78,7 @@ impl Demo {
             }
             Message::ThemeSelected(iced_theme) => {
                 self.custom_palette = iced_theme.palette();
+                self.information_color = Information::default_base(self.custom_palette.background);
                 self.selected_iced = iced_theme;
                 self.refresh_colors();
             }
@@ -81,17 +89,15 @@ impl Demo {
                 self.customize_palette = enabled;
                 self.refresh_colors();
             }
-            Message::PaletteChannelChanged {
-                field,
-                channel,
-                value,
-            } => {
-                let mut color = field.get(&self.custom_palette);
-                channel.set(&mut color, value);
+            Message::PaletteFieldChanged { field, color } => {
                 field.set(&mut self.custom_palette, color);
                 if self.customize_palette {
                     self.refresh_colors();
                 }
+            }
+            Message::InformationColorChanged(color) => {
+                self.information_color = color;
+                self.theme.refresh_information(self.information_color);
             }
             Message::RoundnessChanged(value) => {
                 self.theme.roundness = value;
@@ -145,6 +151,9 @@ impl Demo {
             Message::FabPressed => {
                 self.last_action = Some("FAB pressed".to_string());
             }
+            Message::PickerColorChanged(color) => {
+                self.picker_color = color;
+            }
             Message::Noop => {}
         }
         Task::none()
@@ -156,6 +165,8 @@ impl Demo {
         } else {
             self.selected_iced.clone()
         };
+        self.theme.refresh_paper();
+        self.theme.refresh_information(self.information_color);
     }
 
     pub(crate) fn theme(&self) -> Theme {
@@ -229,7 +240,7 @@ fn build_nav_sidebar(current_page: Page) -> Element<'static, Message> {
     }
 
     let nav_list = nav_list
-        .width(Length::Fixed(140.0))
+        .width(Length::Fixed(200.0))
         .style(move |theme: &Theme, status| nav_item_style(theme, status, current_page));
 
     container(scrollable(nav_list)).height(Length::Fill).into()
@@ -281,6 +292,7 @@ fn build_settings_pane(demo: &Demo) -> Element<'_, Message> {
             editor = editor.push(palette_field_row(field, demo.custom_palette));
         }
         content = content.push(editor);
+        content = content.push(information_color_row(demo.information_color));
     }
 
     content = content.push(base_slider(
@@ -327,46 +339,26 @@ fn base_slider<'a>(
 fn palette_field_row<'a>(field: PaletteField, palette: Palette) -> Element<'a, Message> {
     let color = field.get(&palette);
 
-    let swatch = container(Space::new())
-        .width(Length::Fixed(20.0))
-        .height(Length::Fixed(20.0))
-        .style(move |_theme| iced::widget::container::Style {
-            background: Some(iced::Background::Color(color)),
-            border: iced::Border {
-                color: Color::from_rgba(0.0, 0.0, 0.0, 0.4),
-                width: 1.0,
-                radius: 4.0.into(),
-            },
-            ..iced::widget::container::Style::default()
-        });
-
-    let header = row![
+    row![
         text(field.label()).size(14),
         Space::new().width(Length::Fill),
-        swatch
+        ColorPicker::new(color)
+            .on_change(move |color| Message::PaletteFieldChanged { field, color }),
     ]
     .align_y(iced::Alignment::Center)
-    .spacing(8);
+    .spacing(8)
+    .into()
+}
 
-    let mut group = column![header].spacing(4);
-    for channel in [Channel::R, Channel::G, Channel::B] {
-        let value = channel.get(color);
-        let label = format!("{} {:.2}", channel.label(), value);
-        group = group.push(
-            row![
-                text(label).size(12).width(Length::Fixed(48.0)),
-                slider(0.0..=1.0, value, move |v| Message::PaletteChannelChanged {
-                    field,
-                    channel,
-                    value: v,
-                })
-                .step(0.01_f32),
-            ]
-            .align_y(iced::Alignment::Center)
-            .spacing(8),
-        );
-    }
-    group.into()
+fn information_color_row(color: Color) -> Element<'static, Message> {
+    row![
+        text("Information").size(14),
+        Space::new().width(Length::Fill),
+        ColorPicker::new(color).on_change(Message::InformationColorChanged),
+    ]
+    .align_y(iced::Alignment::Center)
+    .spacing(8)
+    .into()
 }
 
 // -- Menu bar --

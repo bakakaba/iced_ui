@@ -19,6 +19,7 @@ pub mod badge;
 pub mod bottom_sheet;
 pub mod card;
 pub mod chip;
+pub mod color_picker;
 pub mod dialog;
 pub mod divider;
 pub mod fab;
@@ -39,6 +40,7 @@ pub use badge::Badge;
 pub use bottom_sheet::BottomSheet;
 pub use card::{Card, Variant};
 pub use chip::Chip;
+pub use color_picker::ColorPicker;
 pub use dialog::Dialog;
 pub use divider::Divider;
 pub use fab::Fab;
@@ -53,5 +55,8 @@ pub use segmented_button::{Segment, SegmentedButton};
 pub use snackbar::Snackbar;
 pub use tabs::Tabs;
 pub use text::Text;
-pub use theme::{FontSize, PaddingSource, Roundness, RoundnessBase, Space, SpacingBase, Theme};
+pub use theme::{
+    FontSize, Information, PaddingSource, Paper, Roundness, RoundnessBase, Space, SpacingBase,
+    Theme,
+};
 pub use top_app_bar::TopAppBar;

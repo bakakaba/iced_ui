@@ -2,6 +2,7 @@ mod badge;
 mod bottom_sheet;
 mod card;
 mod chip;
+mod colors;
 mod dialog;
 mod divider;
 mod fab;
@@ -28,6 +29,7 @@ pub(crate) enum Page {
     // Showcase
     #[default]
     Overview,
+    Colors,
     // Widgets
     Badge,
     BottomSheet,
@@ -57,6 +59,7 @@ impl Page {
         Self::BottomSheet,
         Self::Card,
         Self::Chip,
+        Self::Colors,
         Self::Dialog,
         Self::Divider,
         Self::Fab,
@@ -76,6 +79,7 @@ impl Page {
     pub(crate) fn label(self) -> &'static str {
         match self {
             Self::Overview => "Overview",
+            Self::Colors => "Colors",
             Self::Badge => "Badge",
             Self::BottomSheet => "BottomSheet",
             Self::Card => "Card",
@@ -101,6 +105,7 @@ impl Page {
 pub(crate) fn build_page_content<'a>(demo: &'a Demo) -> Element<'a, Message> {
     match demo.page {
         Page::Overview => overview::build(demo),
+        Page::Colors => colors::build(demo),
         Page::Menu => menu::build(demo),
         Page::Card => card::build(),
         Page::List => list::build(),

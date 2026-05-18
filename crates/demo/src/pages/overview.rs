@@ -38,13 +38,20 @@ pub(super) fn build<'a>(_demo: &Demo) -> Element<'a, Message> {
     // Divider between sections
     let divider = Divider::horizontal();
 
+    let screen = Card::new(
+        column![
+            app_bar,
+            divider,
+            mail_card,
+            row![iced::widget::Space::new().width(Length::Fill), fab].padding(8),
+        ]
+        .spacing(16),
+    );
+
     column![
         text("Overview").size(20),
         text("A composed layout demonstrating how iced_ui widgets work together.").size(14),
-        app_bar,
-        divider,
-        mail_card,
-        row![iced::widget::Space::new().width(Length::Fill), fab].padding(8),
+        screen,
     ]
     .spacing(16)
     .padding(20)

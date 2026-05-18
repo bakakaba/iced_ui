@@ -32,8 +32,10 @@
 
 mod iced_compat;
 pub mod scale;
+pub mod tokens;
 
 pub use scale::{FontSize, PaddingSource, Roundness, RoundnessBase, Space, SpacingBase};
+pub use tokens::{Information, Paper};
 
 use iced::theme::palette;
 
@@ -66,6 +68,13 @@ pub struct Theme {
     /// [`Roundness::sx(f)`](scale::Roundness::sx) — `sx(2.0)` resolves
     /// to `2.0 * roundness`.
     pub roundness: u8,
+    /// Surface colors that contrast the background. Used for cards,
+    /// sheets, and other surfaces that float above the base
+    /// background.
+    pub paper: Paper,
+    /// Informational color group (typically cyan). Used for
+    /// informational badges, banners, and highlights.
+    pub information: Information,
 }
 
 impl Theme {
@@ -105,21 +114,35 @@ impl Theme {
     pub fn padding(&self, padding: scale::PaddingSource) -> iced::Padding {
         padding.resolve(self.spacing)
     }
+
+    /// Regenerates [`paper`](Self::paper) from the current
+    /// [`colors`](Self::colors) palette.
+    pub fn refresh_paper(&mut self) {
+        let p = self.colors.palette();
+        self.paper = Paper::generate(p.background, p.text);
+    }
+
+    /// Regenerates [`information`](Self::information) from the given
+    /// base color and the current [`colors`](Self::colors) palette.
+    pub fn refresh_information(&mut self, base: iced::Color) {
+        let p = self.colors.palette();
+        self.information = Information::generate(base, p.background, p.text);
+    }
 }
 
 impl Default for Theme {
     fn default() -> Self {
-        Self {
-            colors: iced::Theme::Dark,
-            spacing: Self::DEFAULT_SPACING,
-            roundness: Self::DEFAULT_ROUNDNESS,
-        }
+        Self::from(iced::Theme::Dark)
     }
 }
 
 impl From<iced::Theme> for Theme {
     fn from(colors: iced::Theme) -> Self {
+        let p = colors.palette();
+        let info_base = Information::default_base(p.background);
         Self {
+            paper: Paper::generate(p.background, p.text),
+            information: Information::generate(info_base, p.background, p.text),
             colors,
             spacing: Self::DEFAULT_SPACING,
             roundness: Self::DEFAULT_ROUNDNESS,

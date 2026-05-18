@@ -54,39 +54,6 @@ impl PaletteField {
     }
 }
 
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
-pub(crate) enum Channel {
-    R,
-    G,
-    B,
-}
-
-impl Channel {
-    pub(crate) fn label(self) -> &'static str {
-        match self {
-            Self::R => "R",
-            Self::G => "G",
-            Self::B => "B",
-        }
-    }
-
-    pub(crate) fn get(self, color: iced::Color) -> f32 {
-        match self {
-            Self::R => color.r,
-            Self::G => color.g,
-            Self::B => color.b,
-        }
-    }
-
-    pub(crate) fn set(self, color: &mut iced::Color, value: f32) {
-        match self {
-            Self::R => color.r = value,
-            Self::G => color.g = value,
-            Self::B => color.b = value,
-        }
-    }
-}
-
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub(crate) enum Action {
     New,
@@ -112,11 +79,11 @@ pub(crate) enum Message {
     Triggered(Action),
     ThemeSelected(iced::Theme),
     CustomizeToggled(bool),
-    PaletteChannelChanged {
+    PaletteFieldChanged {
         field: PaletteField,
-        channel: Channel,
-        value: f32,
+        color: iced::Color,
     },
+    InformationColorChanged(iced::Color),
     RoundnessChanged(u8),
     SpacingChanged(u8),
     Navigate(Page),
@@ -136,5 +103,6 @@ pub(crate) enum Message {
     CloseDrawer,
     DrawerItemSelected(usize),
     FabPressed,
+    PickerColorChanged(iced::Color),
     Noop,
 }
