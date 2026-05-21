@@ -3,34 +3,39 @@ use iced_ui::bottom_sheet::BottomSheet;
 use iced_ui::icon_button::{self, IconButton};
 
 use crate::Element;
+use crate::state::ActionLog;
 
 #[derive(Debug, Clone)]
-pub(crate) enum Message {
+pub(crate) enum Msg {
     Toggle,
     Close,
 }
 
-#[derive(Debug, Default)]
-pub(super) struct BottomSheetPage {
+#[derive(Default)]
+pub(crate) struct BottomSheetPage {
     expanded: bool,
 }
 
-impl BottomSheetPage {
-    pub(super) fn update(&mut self, message: Message) {
-        match message {
-            Message::Toggle => self.expanded = !self.expanded,
-            Message::Close => self.expanded = false,
+impl super::PageView for BottomSheetPage {
+    type Msg = Msg;
+    const LABEL: &'static str = "BottomSheet";
+
+    fn update(&mut self, msg: Msg) -> super::Action {
+        match msg {
+            Msg::Toggle => self.expanded = !self.expanded,
+            Msg::Close => self.expanded = false,
         }
+        super::Action::None
     }
 
-    pub(super) fn view(&self) -> Element<'_, Message> {
-        let host_content: Element<'_, Message> = column![
+    fn view(&self, _log: &ActionLog) -> Element<'_, Msg> {
+        let host_content: Element<'_, Msg> = column![
             text("Bottom Sheet").size(20),
             text("A panel sliding from the bottom. Modal or standard.").size(14),
             IconButton::new(text("Toggle Sheet").size(14))
                 .variant(icon_button::Variant::Filled)
                 .size(140.0)
-                .on_press(Message::Toggle),
+                .on_press(Msg::Toggle),
         ]
         .spacing(16)
         .padding(20)
@@ -42,7 +47,7 @@ impl BottomSheetPage {
         )
         .modal(true)
         .expanded(self.expanded)
-        .on_dismiss(Message::Close)
+        .on_dismiss(Msg::Close)
         .drag_handle(true)
         .into()
     }

@@ -6,50 +6,46 @@ use crate::Element;
 use crate::state::ActionLog;
 
 #[derive(Debug, Clone)]
-pub(crate) enum Message {
+pub(crate) enum Msg {
     Toggle,
     Close,
     ItemSelected(usize),
 }
 
-/// Action returned from update for the parent to handle.
-pub(super) enum Action {
-    None,
-    /// An item was selected — parent should log it.
-    LogAction(String),
-}
-
-#[derive(Debug, Default)]
-pub(super) struct NavigationDrawerPage {
+#[derive(Default)]
+pub(crate) struct NavigationDrawerPage {
     expanded: bool,
 }
 
-impl NavigationDrawerPage {
-    pub(super) fn update(&mut self, message: Message) -> Action {
-        match message {
-            Message::Toggle => {
+impl super::PageView for NavigationDrawerPage {
+    type Msg = Msg;
+    const LABEL: &'static str = "NavDrawer";
+
+    fn update(&mut self, msg: Msg) -> super::Action {
+        match msg {
+            Msg::Toggle => {
                 self.expanded = !self.expanded;
-                Action::None
+                super::Action::None
             }
-            Message::Close => {
+            Msg::Close => {
                 self.expanded = false;
-                Action::None
+                super::Action::None
             }
-            Message::ItemSelected(idx) => {
+            Msg::ItemSelected(idx) => {
                 self.expanded = false;
-                Action::LogAction(format!("Drawer item {idx}"))
+                super::Action::Log(format!("Drawer item {idx}"))
             }
         }
     }
 
-    pub(super) fn view(&self, log: &ActionLog) -> Element<'_, Message> {
-        let host: Element<'_, Message> = column![
+    fn view(&self, log: &ActionLog) -> Element<'_, Msg> {
+        let host: Element<'_, Msg> = column![
             text("Navigation Drawer").size(20),
             text("Side panel with destinations. Modal with scrim.").size(14),
             IconButton::new(text("Toggle Drawer").size(14))
                 .variant(icon_button::Variant::Filled)
                 .size(140.0)
-                .on_press(Message::Toggle),
+                .on_press(Msg::Toggle),
             if let Some(last) = &log.last_action {
                 text(format!("Last: {last}")).size(12)
             } else {
@@ -70,8 +66,8 @@ impl NavigationDrawerPage {
             .active(0)
             .modal(true)
             .expanded(self.expanded)
-            .on_dismiss(Message::Close)
-            .on_select(Message::ItemSelected)
+            .on_dismiss(Msg::Close)
+            .on_select(Msg::ItemSelected)
             .into()
     }
 }

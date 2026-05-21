@@ -2,30 +2,35 @@ use iced::widget::{column, text};
 use iced_ui::segmented_button::{Segment, SegmentedButton};
 
 use crate::Element;
+use crate::state::ActionLog;
 
 #[derive(Debug, Clone)]
-pub(crate) enum Message {
+pub(crate) enum Msg {
     Selected(usize),
 }
 
-#[derive(Debug, Default)]
-pub(super) struct SegmentedButtonPage {
+#[derive(Default)]
+pub(crate) struct SegmentedButtonPage {
     selected: usize,
 }
 
-impl SegmentedButtonPage {
-    pub(super) fn update(&mut self, message: Message) {
-        match message {
-            Message::Selected(idx) => self.selected = idx,
+impl super::PageView for SegmentedButtonPage {
+    type Msg = Msg;
+    const LABEL: &'static str = "SegmentedButton";
+
+    fn update(&mut self, msg: Msg) -> super::Action {
+        match msg {
+            Msg::Selected(idx) => self.selected = idx,
         }
+        super::Action::None
     }
 
-    pub(super) fn view(&self) -> Element<'_, Message> {
+    fn view(&self, _log: &ActionLog) -> Element<'_, Msg> {
         let segmented = SegmentedButton::new()
             .push(Segment::new(text("Day")), self.selected == 0)
             .push(Segment::new(text("Week")), self.selected == 1)
             .push(Segment::new(text("Month")), self.selected == 2)
-            .on_press(Message::Selected);
+            .on_press(Msg::Selected);
 
         column![
             text("Segmented Button").size(20),

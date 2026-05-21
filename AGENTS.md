@@ -50,12 +50,79 @@ explicit request from a maintainer.
 1. Implement it under `crates/iced_ui/src/`.
 2. Re-export it from the library's `lib.rs` so downstream users can
    reach it via the public API.
-3. Add a demonstration screen/section to `crates/demo/` that exercises
-   the component's public API.
+3. Add a demo page in `crates/demo/`. See [Demo Page Architecture]
+   (#demo-page-architecture) below.
 4. Add a snapshot test in `crates/iced_ui_tests/tests/<widget>.rs`
    covering the widget's default configuration plus any meaningful
    variants. See [Testing](#testing) below.
 5. Run `just lint && just test` before considering the change done.
+
+## Demo Page Architecture
+
+The demo app uses a **trait + macro** pattern so that each page is
+fully self-contained. All page metadata (label), state, messages,
+update logic, and view are co-located in a single module file.
+
+### Structure
+
+Each page module (`crates/demo/src/pages/<widget>.rs`) exports:
+
+- A `Msg` enum — page-local messages (use `enum Msg {}` for
+  stateless pages that emit no messages).
+- A page struct (e.g. `ChipPage`) implementing `Default`.
+- A `PageView` trait implementation providing:
+  - `const LABEL: &'static str` — sidebar display name.
+  - `fn update(&mut self, msg: Msg) -> Action` — state transitions
+    (optional; default is no-op).
+  - `fn view(&self, log: &ActionLog) -> Element<'_, Msg>` — builds
+    the page UI using the page's own `Msg` type.
+
+### Registration
+
+In `crates/demo/src/pages/mod.rs`, a `pages!` macro invocation is
+the **single source of truth** for page registration:
+
+```rust
+pages! {
+    SHOWCASE {
+        #[default]
+        Overview(overview::OverviewPage),
+    }
+    WIDGETS {
+        Badge(badge::BadgePage),
+        Chip(chip::ChipPage),
+        // ...
+    }
+}
+```
+
+The macro generates the `Page` enum, `ActivePage` enum (state
+embedded in variants), `pages::Message` enum, label lookup, group
+const slices, navigation constructor, and all update/view dispatch.
+
+### Adding a demo page
+
+1. Create `crates/demo/src/pages/<name>.rs`.
+2. Define `pub(crate) enum Msg { ... }` (or `enum Msg {}` if stateless).
+3. Define `pub(crate) struct <Name>Page { ... }` with `Default`.
+4. Implement `super::PageView` for the struct.
+5. Add `mod <name>;` at the top of `pages/mod.rs`.
+6. Add one line to the `pages!` invocation in the appropriate group.
+
+No other files need modification — routing, message wrapping, and
+dispatch are handled automatically by the macro.
+
+### State ownership
+
+- **Page-local state** lives inside the page struct. It is created
+  fresh when navigating to the page and dropped when navigating away
+  (the `ActivePage` enum variant is replaced).
+- **Shared state** (e.g. action log read by multiple pages) lives in
+  `crates/demo/src/state.rs` and is passed to `view()` via the
+  `&ActionLog` parameter.
+- Pages that need to communicate upward (e.g. open a dialog, log an
+  action) return an `Action` variant from their `update()` method.
+  The parent handles it without the page knowing about global state.
 
 ## Testing
 

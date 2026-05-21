@@ -2,48 +2,52 @@ use iced::widget::{column, row, text};
 use iced_ui::fab::{Fab, FabSize};
 
 use crate::Element;
+use crate::state::ActionLog;
 
 #[derive(Debug, Clone)]
-pub(crate) enum Message {
+pub(crate) enum Msg {
     Pressed,
 }
 
-/// Action returned from fab page for the parent to handle.
-pub(super) enum Action {
-    LogAction(String),
-}
+#[derive(Default)]
+pub(crate) struct FabPage;
 
-pub(super) fn update(message: Message) -> Action {
-    match message {
-        Message::Pressed => Action::LogAction("FAB pressed".to_string()),
+impl super::PageView for FabPage {
+    type Msg = Msg;
+    const LABEL: &'static str = "FAB";
+
+    fn update(&mut self, msg: Msg) -> super::Action {
+        match msg {
+            Msg::Pressed => super::Action::Log("FAB pressed".to_string()),
+        }
     }
-}
 
-pub(super) fn view<'a>() -> Element<'a, Message> {
-    let small_fab = Fab::new(text("+").size(18))
-        .size(FabSize::Small)
-        .on_press(Message::Pressed);
+    fn view(&self, _log: &ActionLog) -> Element<'_, Msg> {
+        let small_fab = Fab::new(text("+").size(18))
+            .size(FabSize::Small)
+            .on_press(Msg::Pressed);
 
-    let regular_fab = Fab::new(text("+").size(24)).on_press(Message::Pressed);
+        let regular_fab = Fab::new(text("+").size(24)).on_press(Msg::Pressed);
 
-    let large_fab = Fab::new(text("+").size(36))
-        .size(FabSize::Large)
-        .on_press(Message::Pressed);
+        let large_fab = Fab::new(text("+").size(36))
+            .size(FabSize::Large)
+            .on_press(Msg::Pressed);
 
-    let extended_fab = Fab::new(text("+").size(18))
-        .label(text("Create").size(16))
-        .on_press(Message::Pressed);
+        let extended_fab = Fab::new(text("+").size(18))
+            .label(text("Create").size(16))
+            .on_press(Msg::Pressed);
 
-    let lowered_fab = Fab::new(text("+").size(24))
-        .lowered()
-        .on_press(Message::Pressed);
+        let lowered_fab = Fab::new(text("+").size(24))
+            .lowered()
+            .on_press(Msg::Pressed);
 
-    column![
-        text("FAB (Floating Action Button)").size(20),
-        text("Small, Regular, Large, Extended, and Lowered variants.").size(14),
-        row![small_fab, regular_fab, large_fab, extended_fab, lowered_fab].spacing(16),
-    ]
-    .spacing(16)
-    .padding(20)
-    .into()
+        column![
+            text("FAB (Floating Action Button)").size(20),
+            text("Small, Regular, Large, Extended, and Lowered variants.").size(14),
+            row![small_fab, regular_fab, large_fab, extended_fab, lowered_fab].spacing(16),
+        ]
+        .spacing(16)
+        .padding(20)
+        .into()
+    }
 }

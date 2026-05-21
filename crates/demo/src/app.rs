@@ -13,10 +13,9 @@ use iced_ui::theme::tokens::Information;
 
 use crate::Element;
 use crate::message::{Action, Message, PaletteField};
-use crate::pages::{self, Page, PageStates};
+use crate::pages::{self, ActivePage, Page};
 use crate::state::ActionLog;
 
-#[derive(Debug)]
 pub(crate) struct Demo {
     pub(crate) action_log: ActionLog,
     pub(crate) theme: Theme,
@@ -25,9 +24,8 @@ pub(crate) struct Demo {
     pub(crate) customize_palette: bool,
     pub(crate) custom_palette: Palette,
     pub(crate) information_color: Color,
-    pub(crate) page: Page,
     pub(crate) dialog_open: bool,
-    pub(crate) page_states: PageStates,
+    pub(crate) active_page: ActivePage,
 }
 
 impl Default for Demo {
@@ -43,9 +41,8 @@ impl Default for Demo {
             customize_palette: false,
             custom_palette,
             information_color,
-            page: Page::default(),
             dialog_open: false,
-            page_states: PageStates::default(),
+            active_page: ActivePage::default(),
         }
     }
 }
@@ -89,12 +86,12 @@ impl Demo {
                 self.theme.spacing = value;
             }
             Message::Navigate(page) => {
-                self.page = page;
+                self.active_page = ActivePage::navigate(page);
             }
             Message::CloseDialog | Message::DialogConfirmed => {
                 self.dialog_open = false;
             }
-            Message::Page(page_msg) => match pages::update(&mut self.page_states, page_msg) {
+            Message::Page(page_msg) => match self.active_page.update(page_msg) {
                 pages::Action::None => {}
                 pages::Action::OpenDialog => {
                     self.dialog_open = true;
@@ -124,10 +121,10 @@ impl Demo {
     pub(crate) fn view(&self) -> Element<'_, Message> {
         let menu_bar = build_menu_bar(self.sidebar_visible);
 
-        let nav = build_nav_sidebar(self.page);
+        let current_page = self.active_page.page();
+        let nav = build_nav_sidebar(current_page);
 
-        let page_content =
-            pages::view(self.page, &self.page_states, &self.action_log).map(Message::Page);
+        let page_content = self.active_page.view(&self.action_log).map(Message::Page);
 
         let body = container(scrollable(page_content))
             .width(Length::Fill)

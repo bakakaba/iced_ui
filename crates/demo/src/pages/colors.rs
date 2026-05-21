@@ -5,14 +5,14 @@ use iced_ui::Theme;
 use iced_ui::color_picker::ColorPicker;
 
 use crate::Element;
+use crate::state::ActionLog;
 
 #[derive(Debug, Clone)]
-pub(crate) enum Message {
+pub(crate) enum Msg {
     PickerColorChanged(Color),
 }
 
-#[derive(Debug)]
-pub(super) struct ColorsPage {
+pub(crate) struct ColorsPage {
     picker_color: Color,
 }
 
@@ -24,14 +24,18 @@ impl Default for ColorsPage {
     }
 }
 
-impl ColorsPage {
-    pub(super) fn update(&mut self, message: Message) {
-        match message {
-            Message::PickerColorChanged(color) => self.picker_color = color,
+impl super::PageView for ColorsPage {
+    type Msg = Msg;
+    const LABEL: &'static str = "Colors";
+
+    fn update(&mut self, msg: Msg) -> super::Action {
+        match msg {
+            Msg::PickerColorChanged(color) => self.picker_color = color,
         }
+        super::Action::None
     }
 
-    pub(super) fn view(&self) -> Element<'_, Message> {
+    fn view(&self, _log: &ActionLog) -> Element<'_, Msg> {
         column![
             text("Color Tokens").size(20),
             text("Extended palette colors derived from the current theme.").size(14),
@@ -72,7 +76,7 @@ impl ColorsPage {
             text("Information").size(16),
             information_swatches(),
             text("Color Picker").size(16),
-            ColorPicker::new(self.picker_color).on_change(Message::PickerColorChanged),
+            ColorPicker::new(self.picker_color).on_change(Msg::PickerColorChanged),
         ]
         .spacing(12)
         .padding(20)
@@ -80,7 +84,7 @@ impl ColorsPage {
     }
 }
 
-fn background_swatches<'a>() -> Element<'a, Message> {
+fn background_swatches<'a>() -> Element<'a, Msg> {
     row![
         swatch("base", |theme| theme.extended_palette().background.base),
         swatch("weakest", |theme| theme
@@ -108,7 +112,7 @@ fn background_swatches<'a>() -> Element<'a, Message> {
     .into()
 }
 
-fn paper_swatches<'a>() -> Element<'a, Message> {
+fn paper_swatches<'a>() -> Element<'a, Msg> {
     row![
         swatch("base", |theme| theme.paper.base),
         swatch("weakest", |theme| theme.paper.weakest),
@@ -128,7 +132,7 @@ fn trio_swatches<'a>(
     base: fn(&iced::theme::palette::Extended) -> &iced::theme::palette::Pair,
     weak: fn(&iced::theme::palette::Extended) -> &iced::theme::palette::Pair,
     strong: fn(&iced::theme::palette::Extended) -> &iced::theme::palette::Pair,
-) -> Element<'a, Message> {
+) -> Element<'a, Msg> {
     row![
         swatch("base", move |theme| *base(theme.extended_palette())),
         swatch("weak", move |theme| *weak(theme.extended_palette())),
@@ -139,7 +143,7 @@ fn trio_swatches<'a>(
     .into()
 }
 
-fn information_swatches<'a>() -> Element<'a, Message> {
+fn information_swatches<'a>() -> Element<'a, Msg> {
     row![
         swatch("base", |theme| theme.information.base),
         swatch("weak", |theme| theme.information.weak),
@@ -150,7 +154,7 @@ fn information_swatches<'a>() -> Element<'a, Message> {
     .into()
 }
 
-fn swatch<'a>(label: &'a str, pair_fn: impl Fn(&Theme) -> Pair + 'a) -> Element<'a, Message> {
+fn swatch<'a>(label: &'a str, pair_fn: impl Fn(&Theme) -> Pair + 'a) -> Element<'a, Msg> {
     container(
         container(
             column![

@@ -3,24 +3,36 @@ use iced::widget::{column, row, text};
 use iced_ui::divider::Divider;
 
 use crate::Element;
+use crate::state::ActionLog;
 
-pub(super) fn build<'a>() -> Element<'a, super::Message> {
-    column![
-        text("Divider").size(20),
-        text("Horizontal and vertical separators with optional insets.").size(14),
-        text("Full width:").size(14),
-        Divider::horizontal(),
-        text("With inset:").size(14),
-        Divider::horizontal().inset(iced_ui::Space::sx(4.0)),
-        row![
-            text("Vertical:").size(14),
-            Divider::vertical(),
-            text("Between content").size(14),
+#[derive(Debug, Clone)]
+pub(crate) enum Msg {}
+
+#[derive(Default)]
+pub(crate) struct DividerPage;
+
+impl super::PageView for DividerPage {
+    type Msg = Msg;
+    const LABEL: &'static str = "Divider";
+
+    fn view(&self, _log: &ActionLog) -> Element<'_, Msg> {
+        column![
+            text("Divider").size(20),
+            text("Horizontal and vertical separators with optional insets.").size(14),
+            text("Full width:").size(14),
+            Divider::horizontal(),
+            text("With inset:").size(14),
+            Divider::horizontal().inset(iced_ui::Space::sx(4.0)),
+            row![
+                text("Vertical:").size(14),
+                Divider::vertical(),
+                text("Between content").size(14),
+            ]
+            .spacing(8)
+            .height(Length::Fixed(40.0)),
         ]
-        .spacing(8)
-        .height(Length::Fixed(40.0)),
-    ]
-    .spacing(12)
-    .padding(20)
-    .into()
+        .spacing(12)
+        .padding(20)
+        .into()
+    }
 }

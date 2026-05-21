@@ -1,7 +1,4 @@
 //! Kitchen-sink demo for every `iced_ui` component.
-//!
-//! Each component page showcases its default appearance without
-//! overriding any theme-driven values (padding, spacing, roundness).
 
 mod app;
 mod message;

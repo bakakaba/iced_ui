@@ -5,65 +5,77 @@ use iced::{Color, Length};
 use iced_ui::card::Card;
 
 use crate::Element;
+use crate::state::ActionLog;
 
-pub(super) fn build<'a>() -> Element<'a, super::Message> {
-    let flat_card = Card::new(
+#[derive(Debug, Clone)]
+pub(crate) enum Msg {}
+
+#[derive(Default)]
+pub(crate) struct CardPage;
+
+impl super::PageView for CardPage {
+    type Msg = Msg;
+    const LABEL: &'static str = "Card";
+
+    fn view(&self, _log: &ActionLog) -> Element<'_, Msg> {
+        let flat_card = Card::new(
+            column![
+                text("Flat").size(18),
+                text("Bordered frame with no shadow.").size(14),
+            ]
+            .spacing(6),
+        )
+        .width(Length::Fixed(220.0));
+
+        let elevated_card = Card::new(
+            column![
+                text("Elevated").size(18),
+                text("Drop shadow, no border.").size(14),
+            ]
+            .spacing(6),
+        )
+        .width(Length::Fixed(220.0))
+        .elevated();
+
+        let raster_card = Card::new(
+            column![
+                Space::new().height(Length::Fixed(40.0)),
+                text("Raster image").size(18).color(Color::WHITE),
+                text("Rounded corners clip the image.")
+                    .size(14)
+                    .color(Color::WHITE),
+            ]
+            .spacing(6),
+        )
+        .width(Length::Fixed(220.0))
+        .height(Length::Fixed(140.0))
+        .background_image(checker_handle());
+
+        let svg_card = Card::new(
+            column![
+                Space::new().height(Length::Fixed(40.0)),
+                text("SVG image").size(18).color(Color::WHITE),
+                text("Vector backgrounds supported.")
+                    .size(14)
+                    .color(Color::WHITE),
+            ]
+            .spacing(6),
+        )
+        .width(Length::Fixed(220.0))
+        .height(Length::Fixed(140.0))
+        .elevated()
+        .background_svg(gradient_svg_handle());
+
         column![
-            text("Flat").size(18),
-            text("Bordered frame with no shadow.").size(14),
+            text("Card").size(20),
+            row![flat_card, elevated_card, raster_card, svg_card]
+                .spacing(16)
+                .wrap(),
         ]
-        .spacing(6),
-    )
-    .width(Length::Fixed(220.0));
-
-    let elevated_card = Card::new(
-        column![
-            text("Elevated").size(18),
-            text("Drop shadow, no border.").size(14),
-        ]
-        .spacing(6),
-    )
-    .width(Length::Fixed(220.0))
-    .elevated();
-
-    let raster_card = Card::new(
-        column![
-            Space::new().height(Length::Fixed(40.0)),
-            text("Raster image").size(18).color(Color::WHITE),
-            text("Rounded corners clip the image.")
-                .size(14)
-                .color(Color::WHITE),
-        ]
-        .spacing(6),
-    )
-    .width(Length::Fixed(220.0))
-    .height(Length::Fixed(140.0))
-    .background_image(checker_handle());
-
-    let svg_card = Card::new(
-        column![
-            Space::new().height(Length::Fixed(40.0)),
-            text("SVG image").size(18).color(Color::WHITE),
-            text("Vector backgrounds supported.")
-                .size(14)
-                .color(Color::WHITE),
-        ]
-        .spacing(6),
-    )
-    .width(Length::Fixed(220.0))
-    .height(Length::Fixed(140.0))
-    .elevated()
-    .background_svg(gradient_svg_handle());
-
-    column![
-        text("Card").size(20),
-        row![flat_card, elevated_card, raster_card, svg_card]
-            .spacing(16)
-            .wrap(),
-    ]
-    .spacing(16)
-    .padding(20)
-    .into()
+        .spacing(16)
+        .padding(20)
+        .into()
+    }
 }
 
 fn checker_handle() -> advanced_image::Handle {
