@@ -18,3 +18,13 @@ impl ActionLog {
         self.last_action = Some(action.into());
     }
 }
+
+/// Actions that pages request from the parent application.
+///
+/// Returned from `PageView::update()` to communicate upward without
+/// pages needing to know about global state.
+pub(crate) enum Action {
+    None,
+    OpenDialog,
+    Log(String),
+}

@@ -22,14 +22,8 @@ mod top_app_bar;
 use std::fmt::Debug;
 
 use crate::Element;
+pub(crate) use crate::state::Action;
 use crate::state::ActionLog;
-
-/// Actions that pages request from the parent.
-pub(crate) enum Action {
-    None,
-    OpenDialog,
-    Log(String),
-}
 
 /// Trait implemented by every page. All page metadata and behavior is
 /// co-located in the page's own module.
