@@ -3,9 +3,8 @@ use iced::widget::{column, row, text};
 use iced_ui::divider::Divider;
 
 use crate::Element;
-use crate::message::Message;
 
-pub(super) fn build<'a>() -> Element<'a, Message> {
+pub(super) fn build<'a>() -> Element<'a, super::Message> {
     column![
         text("Divider").size(20),
         text("Horizontal and vertical separators with optional insets.").size(14),

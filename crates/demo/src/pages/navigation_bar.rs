@@ -2,10 +2,9 @@ use iced::widget::{column, text};
 use iced_ui::navigation_bar::{self, NavigationBar};
 
 use crate::Element;
-use crate::message::Message;
 
-pub(super) fn build<'a>() -> Element<'a, Message> {
-    let bar = NavigationBar::new(|_idx| Message::Noop)
+pub(super) fn build<'a>() -> Element<'a, super::Message> {
+    let bar = NavigationBar::new(|_idx| super::Message::Noop)
         .push(navigation_bar::Destination::new("Home"))
         .push(navigation_bar::Destination::new("Search"))
         .push(navigation_bar::Destination::new("Profile"))

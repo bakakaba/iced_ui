@@ -1,3 +1,4 @@
+use crate::pages;
 use crate::pages::Page;
 
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
@@ -76,6 +77,7 @@ pub(crate) enum Action {
 
 #[derive(Debug, Clone)]
 pub(crate) enum Message {
+    // Global application messages
     Triggered(Action),
     ThemeSelected(iced::Theme),
     CustomizeToggled(bool),
@@ -87,22 +89,9 @@ pub(crate) enum Message {
     RoundnessChanged(u8),
     SpacingChanged(u8),
     Navigate(Page),
-    // Interactive demo messages
-    IconButtonToggled,
-    ChipToggled,
-    SegmentSelected(usize),
-    OpenDialog,
+    // Dialog (global — wraps entire view)
     CloseDialog,
     DialogConfirmed,
-    ShowSnackbar,
-    HideSnackbar,
-    ToggleBottomSheet,
-    CloseBottomSheet,
-    TabSelected(usize),
-    ToggleDrawer,
-    CloseDrawer,
-    DrawerItemSelected(usize),
-    FabPressed,
-    PickerColorChanged(iced::Color),
-    Noop,
+    // All page-local messages routed through this variant
+    Page(pages::Message),
 }

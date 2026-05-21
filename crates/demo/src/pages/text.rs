@@ -2,9 +2,8 @@ use iced::widget::column;
 use iced_ui::text::Text as UiText;
 
 use crate::Element;
-use crate::message::Message;
 
-pub(super) fn build<'a>() -> Element<'a, Message> {
+pub(super) fn build<'a>() -> Element<'a, super::Message> {
     column![
         UiText::h1("Heading 1"),
         UiText::h2("Heading 2"),

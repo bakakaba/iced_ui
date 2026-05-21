@@ -13,12 +13,12 @@ use iced_ui::theme::tokens::Information;
 
 use crate::Element;
 use crate::message::{Action, Message, PaletteField};
-use crate::pages::{self, Page};
+use crate::pages::{self, Page, PageStates};
+use crate::state::ActionLog;
 
 #[derive(Debug)]
 pub(crate) struct Demo {
-    pub(crate) counter: u32,
-    pub(crate) last_action: Option<String>,
+    pub(crate) action_log: ActionLog,
     pub(crate) theme: Theme,
     pub(crate) selected_iced: iced::Theme,
     pub(crate) sidebar_visible: bool,
@@ -26,16 +26,8 @@ pub(crate) struct Demo {
     pub(crate) custom_palette: Palette,
     pub(crate) information_color: Color,
     pub(crate) page: Page,
-    // State for interactive demos
-    pub(crate) icon_btn_toggled: bool,
-    pub(crate) chip_selected: bool,
-    pub(crate) segment_selected: usize,
     pub(crate) dialog_open: bool,
-    pub(crate) snackbar_visible: bool,
-    pub(crate) bottom_sheet_expanded: bool,
-    pub(crate) tab_active: usize,
-    pub(crate) drawer_expanded: bool,
-    pub(crate) picker_color: Color,
+    pub(crate) page_states: PageStates,
 }
 
 impl Default for Demo {
@@ -44,8 +36,7 @@ impl Default for Demo {
         let custom_palette = selected_iced.palette();
         let information_color = Information::default_base(custom_palette.background);
         Self {
-            counter: 0,
-            last_action: None,
+            action_log: ActionLog::default(),
             theme: Theme::from(selected_iced.clone()),
             selected_iced,
             sidebar_visible: true,
@@ -53,15 +44,8 @@ impl Default for Demo {
             custom_palette,
             information_color,
             page: Page::default(),
-            icon_btn_toggled: false,
-            chip_selected: false,
-            segment_selected: 0,
             dialog_open: false,
-            snackbar_visible: false,
-            bottom_sheet_expanded: false,
-            tab_active: 0,
-            drawer_expanded: false,
-            picker_color: Color::from_rgb(0.2, 0.6, 1.0),
+            page_states: PageStates::default(),
         }
     }
 }
@@ -70,8 +54,7 @@ impl Demo {
     pub(crate) fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             Message::Triggered(action) => {
-                self.counter = self.counter.saturating_add(1);
-                self.last_action = Some(format!("{action:?}"));
+                self.action_log.record(format!("{action:?}"));
                 if matches!(action, Action::ToggleSidebar) {
                     self.sidebar_visible = !self.sidebar_visible;
                 }
@@ -108,53 +91,18 @@ impl Demo {
             Message::Navigate(page) => {
                 self.page = page;
             }
-            Message::IconButtonToggled => {
-                self.icon_btn_toggled = !self.icon_btn_toggled;
-            }
-            Message::ChipToggled => {
-                self.chip_selected = !self.chip_selected;
-            }
-            Message::SegmentSelected(idx) => {
-                self.segment_selected = idx;
-            }
-            Message::OpenDialog => {
-                self.dialog_open = true;
-            }
             Message::CloseDialog | Message::DialogConfirmed => {
                 self.dialog_open = false;
             }
-            Message::ShowSnackbar => {
-                self.snackbar_visible = true;
-            }
-            Message::HideSnackbar => {
-                self.snackbar_visible = false;
-            }
-            Message::ToggleBottomSheet => {
-                self.bottom_sheet_expanded = !self.bottom_sheet_expanded;
-            }
-            Message::CloseBottomSheet => {
-                self.bottom_sheet_expanded = false;
-            }
-            Message::TabSelected(idx) => {
-                self.tab_active = idx;
-            }
-            Message::ToggleDrawer => {
-                self.drawer_expanded = !self.drawer_expanded;
-            }
-            Message::CloseDrawer => {
-                self.drawer_expanded = false;
-            }
-            Message::DrawerItemSelected(idx) => {
-                self.last_action = Some(format!("Drawer item {idx}"));
-                self.drawer_expanded = false;
-            }
-            Message::FabPressed => {
-                self.last_action = Some("FAB pressed".to_string());
-            }
-            Message::PickerColorChanged(color) => {
-                self.picker_color = color;
-            }
-            Message::Noop => {}
+            Message::Page(page_msg) => match pages::update(&mut self.page_states, page_msg) {
+                pages::Action::None => {}
+                pages::Action::OpenDialog => {
+                    self.dialog_open = true;
+                }
+                pages::Action::Log(s) => {
+                    self.action_log.set_last(s);
+                }
+            },
         }
         Task::none()
     }
@@ -178,7 +126,10 @@ impl Demo {
 
         let nav = build_nav_sidebar(self.page);
 
-        let body = container(scrollable(pages::build_page_content(self)))
+        let page_content =
+            pages::view(self.page, &self.page_states, &self.action_log).map(Message::Page);
+
+        let body = container(scrollable(page_content))
             .width(Length::Fill)
             .height(Length::Fill);
 

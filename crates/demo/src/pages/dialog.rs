@@ -2,9 +2,8 @@ use iced::widget::{column, text};
 use iced_ui::icon_button::{self, IconButton};
 
 use crate::Element;
-use crate::message::Message;
 
-pub(super) fn build<'a>() -> Element<'a, Message> {
+pub(super) fn build<'a>() -> Element<'a, super::Message> {
     column![
         text("Dialog").size(20),
         text("Modal overlay with scrim, title, body, and action buttons.").size(14),
@@ -12,7 +11,7 @@ pub(super) fn build<'a>() -> Element<'a, Message> {
         IconButton::new(text("Open Dialog").size(14))
             .variant(icon_button::Variant::Filled)
             .size(120.0)
-            .on_press(Message::OpenDialog),
+            .on_press(super::Message::OpenDialog),
     ]
     .spacing(16)
     .padding(20)

@@ -3,10 +3,9 @@ use iced::widget::{column, container, text};
 use iced_ui::navigation_rail::{self, NavigationRail};
 
 use crate::Element;
-use crate::message::Message;
 
-pub(super) fn build<'a>() -> Element<'a, Message> {
-    let rail = NavigationRail::new(|_idx| Message::Noop)
+pub(super) fn build<'a>() -> Element<'a, super::Message> {
+    let rail = NavigationRail::new(|_idx| super::Message::Noop)
         .push(navigation_rail::Destination::new("Home"))
         .push(navigation_rail::Destination::new("Search"))
         .push(navigation_rail::Destination::new("Library"))

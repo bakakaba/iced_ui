@@ -2,9 +2,8 @@ use iced::widget::{column, row, text};
 use iced_ui::badge::Badge;
 
 use crate::Element;
-use crate::message::Message;
 
-pub(super) fn build<'a>() -> Element<'a, Message> {
+pub(super) fn build<'a>() -> Element<'a, super::Message> {
     let dot_badge = Badge::dot(text("Mail").size(16));
     let count_badge = Badge::count(text("Inbox").size(16), 5);
     let large_count = Badge::count(text("Notifications").size(16), 1234).max(999);

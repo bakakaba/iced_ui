@@ -6,6 +6,7 @@
 mod app;
 mod message;
 mod pages;
+mod state;
 
 use iced_ui::Theme;
 

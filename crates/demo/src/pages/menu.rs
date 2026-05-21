@@ -1,12 +1,11 @@
 use iced::widget::{column, row, text};
 
 use crate::Element;
-use crate::app::Demo;
-use crate::message::Message;
+use crate::state::ActionLog;
 
-pub(super) fn build<'a>(demo: &Demo) -> Element<'a, Message> {
-    let status = match &demo.last_action {
-        Some(last) => format!("Last action: {last} (count: {})", demo.counter),
+pub(super) fn build<'a>(log: &ActionLog) -> Element<'a, super::Message> {
+    let status = match &log.last_action {
+        Some(last) => format!("Last action: {last} (count: {})", log.counter),
         None => "Try opening a menu, activating an item, or pressing a shortcut.".to_string(),
     };
 

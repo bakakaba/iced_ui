@@ -5,9 +5,8 @@ use iced::{Color, Length};
 use iced_ui::card::Card;
 
 use crate::Element;
-use crate::message::Message;
 
-pub(super) fn build<'a>() -> Element<'a, Message> {
+pub(super) fn build<'a>() -> Element<'a, super::Message> {
     let flat_card = Card::new(
         column![
             text("Flat").size(18),

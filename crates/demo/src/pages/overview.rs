@@ -8,13 +8,11 @@ use iced_ui::list;
 use iced_ui::top_app_bar::TopAppBar;
 
 use crate::Element;
-use crate::app::Demo;
-use crate::message::Message;
 
-pub(super) fn build<'a>(_demo: &Demo) -> Element<'a, Message> {
+pub(super) fn build<'a>() -> Element<'a, super::Message> {
     // Top app bar
-    let nav_icon: Element<'_, Message> = text("=").size(20).into();
-    let action: Element<'_, Message> = text("?").size(16).into();
+    let nav_icon: Element<'_, super::Message> = text("=").size(20).into();
+    let action: Element<'_, super::Message> = text("?").size(16).into();
     let app_bar = TopAppBar::new("My App")
         .navigation_icon(nav_icon)
         .action(action);
@@ -33,7 +31,7 @@ pub(super) fn build<'a>(_demo: &Demo) -> Element<'a, Message> {
     // A FAB
     let fab = Fab::new(text("+").size(24))
         .label(text("Compose").size(16))
-        .on_press(Message::Noop);
+        .on_press(super::Message::Noop);
 
     // Divider between sections
     let divider = Divider::horizontal();

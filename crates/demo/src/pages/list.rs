@@ -3,9 +3,8 @@ use iced::widget::{column, text};
 use iced_ui::list;
 
 use crate::Element;
-use crate::message::Message;
 
-pub(super) fn build<'a>() -> Element<'a, Message> {
+pub(super) fn build<'a>() -> Element<'a, super::Message> {
     let example_list = list::List::new()
         .push(list::Item::new(text("Apple")))
         .push(list::Item::new(text("Banana")))

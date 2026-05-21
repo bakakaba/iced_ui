@@ -5,55 +5,79 @@ use iced_ui::Theme;
 use iced_ui::color_picker::ColorPicker;
 
 use crate::Element;
-use crate::app::Demo;
-use crate::message::Message;
 
-pub(super) fn build<'a>(demo: &Demo) -> Element<'a, Message> {
-    column![
-        text("Color Tokens").size(20),
-        text("Extended palette colors derived from the current theme.").size(14),
-        text("Background").size(16),
-        background_swatches(),
-        text("Paper").size(16),
-        paper_swatches(),
-        text("Primary").size(16),
-        trio_swatches(
-            |ext| &ext.primary.base,
-            |ext| &ext.primary.weak,
-            |ext| &ext.primary.strong,
-        ),
-        text("Secondary").size(16),
-        trio_swatches(
-            |ext| &ext.secondary.base,
-            |ext| &ext.secondary.weak,
-            |ext| &ext.secondary.strong,
-        ),
-        text("Success").size(16),
-        trio_swatches(
-            |ext| &ext.success.base,
-            |ext| &ext.success.weak,
-            |ext| &ext.success.strong,
-        ),
-        text("Warning").size(16),
-        trio_swatches(
-            |ext| &ext.warning.base,
-            |ext| &ext.warning.weak,
-            |ext| &ext.warning.strong,
-        ),
-        text("Danger").size(16),
-        trio_swatches(
-            |ext| &ext.danger.base,
-            |ext| &ext.danger.weak,
-            |ext| &ext.danger.strong,
-        ),
-        text("Information").size(16),
-        information_swatches(),
-        text("Color Picker").size(16),
-        ColorPicker::new(demo.picker_color).on_change(Message::PickerColorChanged),
-    ]
-    .spacing(12)
-    .padding(20)
-    .into()
+#[derive(Debug, Clone)]
+pub(crate) enum Message {
+    PickerColorChanged(Color),
+}
+
+#[derive(Debug)]
+pub(super) struct ColorsPage {
+    picker_color: Color,
+}
+
+impl Default for ColorsPage {
+    fn default() -> Self {
+        Self {
+            picker_color: Color::from_rgb(0.2, 0.6, 1.0),
+        }
+    }
+}
+
+impl ColorsPage {
+    pub(super) fn update(&mut self, message: Message) {
+        match message {
+            Message::PickerColorChanged(color) => self.picker_color = color,
+        }
+    }
+
+    pub(super) fn view(&self) -> Element<'_, Message> {
+        column![
+            text("Color Tokens").size(20),
+            text("Extended palette colors derived from the current theme.").size(14),
+            text("Background").size(16),
+            background_swatches(),
+            text("Paper").size(16),
+            paper_swatches(),
+            text("Primary").size(16),
+            trio_swatches(
+                |ext| &ext.primary.base,
+                |ext| &ext.primary.weak,
+                |ext| &ext.primary.strong,
+            ),
+            text("Secondary").size(16),
+            trio_swatches(
+                |ext| &ext.secondary.base,
+                |ext| &ext.secondary.weak,
+                |ext| &ext.secondary.strong,
+            ),
+            text("Success").size(16),
+            trio_swatches(
+                |ext| &ext.success.base,
+                |ext| &ext.success.weak,
+                |ext| &ext.success.strong,
+            ),
+            text("Warning").size(16),
+            trio_swatches(
+                |ext| &ext.warning.base,
+                |ext| &ext.warning.weak,
+                |ext| &ext.warning.strong,
+            ),
+            text("Danger").size(16),
+            trio_swatches(
+                |ext| &ext.danger.base,
+                |ext| &ext.danger.weak,
+                |ext| &ext.danger.strong,
+            ),
+            text("Information").size(16),
+            information_swatches(),
+            text("Color Picker").size(16),
+            ColorPicker::new(self.picker_color).on_change(Message::PickerColorChanged),
+        ]
+        .spacing(12)
+        .padding(20)
+        .into()
+    }
 }
 
 fn background_swatches<'a>() -> Element<'a, Message> {
