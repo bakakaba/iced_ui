@@ -1,10 +1,10 @@
 use iced::Length;
 use iced::widget::{column, row, text};
 use iced_ui::badge::Badge;
-use iced_ui::card::Card;
 use iced_ui::divider::Divider;
 use iced_ui::fab::Fab;
 use iced_ui::list;
+use iced_ui::screen::Screen;
 use iced_ui::top_app_bar::TopAppBar;
 
 use crate::Element;
@@ -28,7 +28,7 @@ impl super::PageView for OverviewPage {
             .navigation_icon(nav_icon)
             .action(action);
 
-        // A card containing a list with badges
+        // A list with badges
         let inbox_item = Badge::count(text("Inbox").size(14), 3);
         let updates_item = Badge::dot(text("Updates").size(14));
         let items_list = list::List::new()
@@ -37,19 +37,17 @@ impl super::PageView for OverviewPage {
             .push(list::Item::new(text("Drafts").size(14)))
             .push(list::Item::new(text("Sent").size(14)));
 
-        let mail_card = Card::new(column![text("Mailbox").size(18), items_list].spacing(8));
-
         // A FAB
         let fab = Fab::new(text("+").size(24)).label(text("Compose").size(16));
 
         // Divider between sections
         let divider = Divider::horizontal();
 
-        let screen = Card::new(
+        let screen = Screen::new(
             column![
                 app_bar,
                 divider,
-                mail_card,
+                items_list,
                 row![iced::widget::Space::new().width(Length::Fill), fab].padding(8),
             ]
             .spacing(16),

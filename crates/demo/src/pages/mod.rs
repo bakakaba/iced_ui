@@ -13,6 +13,7 @@ mod navigation_bar;
 mod navigation_drawer;
 mod navigation_rail;
 mod overview;
+mod screen;
 mod segmented_button;
 mod snackbar;
 mod tabs;
@@ -136,6 +137,7 @@ pages! {
         NavigationBar(navigation_bar::NavigationBarPage),
         NavigationDrawer(navigation_drawer::NavigationDrawerPage),
         NavigationRail(navigation_rail::NavigationRailPage),
+        Screen(screen::ScreenPage),
         SegmentedButton(segmented_button::SegmentedButtonPage),
         Snackbar(snackbar::SnackbarPage),
         Tabs(tabs::TabsPage),

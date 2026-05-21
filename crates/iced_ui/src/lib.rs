@@ -29,6 +29,7 @@ pub mod menu;
 pub mod navigation_bar;
 pub mod navigation_drawer;
 pub mod navigation_rail;
+pub mod screen;
 pub mod segmented_button;
 pub mod snackbar;
 pub mod tabs;
@@ -51,6 +52,7 @@ pub use menu::{
 pub use navigation_bar::NavigationBar;
 pub use navigation_drawer::NavigationDrawer;
 pub use navigation_rail::NavigationRail;
+pub use screen::Screen;
 pub use segmented_button::{Segment, SegmentedButton};
 pub use snackbar::Snackbar;
 pub use tabs::Tabs;
