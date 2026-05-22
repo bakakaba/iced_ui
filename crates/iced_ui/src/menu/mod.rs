@@ -9,6 +9,7 @@ mod item;
 mod overlay;
 mod shortcut;
 mod style;
+mod trigger;
 
 use std::cell::Cell;
 use std::marker::PhantomData;
@@ -28,6 +29,7 @@ use iced::{
 pub use item::{Entry, Icon, Item, Menu, Separator};
 pub use shortcut::{KeyBinding, shortcuts};
 pub use style::{Catalog, Style, StyleFn, default};
+pub use trigger::MenuButton;
 
 use crate::{PaddingSource, SpacingBase};
 

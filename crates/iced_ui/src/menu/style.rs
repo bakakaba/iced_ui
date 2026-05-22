@@ -108,9 +108,13 @@ pub fn default(theme: &Theme) -> Style {
             width: 0.0,
             color: Color::TRANSPARENT,
         },
-        bar_text: palette.background.weak.text,
-        bar_item_background_active: palette.primary.base.color.into(),
-        bar_text_active: palette.primary.base.text,
+        bar_text: palette.primary.base.color,
+        bar_item_background_active: Color {
+            a: 0.15,
+            ..palette.primary.base.color
+        }
+        .into(),
+        bar_text_active: palette.primary.base.color,
         item_radius: theme.radius(Roundness::sx(2.0)),
 
         menu_background: palette.background.base.color.into(),

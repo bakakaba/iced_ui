@@ -17,6 +17,7 @@
 
 pub mod badge;
 pub mod bottom_sheet;
+pub mod button;
 pub mod card;
 pub mod chip;
 pub mod color_picker;
@@ -39,6 +40,7 @@ pub mod top_app_bar;
 
 pub use badge::Badge;
 pub use bottom_sheet::BottomSheet;
+pub use button::Button;
 pub use card::{Card, Variant};
 pub use chip::Chip;
 pub use color_picker::ColorPicker;
@@ -47,7 +49,8 @@ pub use divider::Divider;
 pub use fab::Fab;
 pub use icon_button::IconButton;
 pub use menu::{
-    Catalog, Icon, Item, KeyBinding, Menu, MenuBar, Separator, Style, StyleFn, default, shortcuts,
+    Catalog, Icon, Item, KeyBinding, Menu, MenuBar, MenuButton, Separator, Style, StyleFn, default,
+    shortcuts,
 };
 pub use navigation_bar::NavigationBar;
 pub use navigation_drawer::NavigationDrawer;

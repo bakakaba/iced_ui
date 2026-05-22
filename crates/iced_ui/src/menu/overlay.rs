@@ -477,7 +477,7 @@ where
     }
 }
 
-fn row_offset<Message>(menu: &Menu<Message>, index: usize, metrics: Metrics) -> f32 {
+pub(super) fn row_offset<Message>(menu: &Menu<Message>, index: usize, metrics: Metrics) -> f32 {
     let mut y = 0.0;
     for (i, entry) in menu.entries.iter().enumerate() {
         if i == index {
@@ -491,7 +491,7 @@ fn row_offset<Message>(menu: &Menu<Message>, index: usize, metrics: Metrics) -> 
     y
 }
 
-fn hit_row<Message>(
+pub(super) fn hit_row<Message>(
     menu: &Menu<Message>,
     layout: Layout<'_>,
     metrics: Metrics,
@@ -850,7 +850,7 @@ fn walk_menu<'m, Message>(menus: &'m [Menu<Message>], path: &[usize]) -> &'m Men
     cur
 }
 
-fn layout_menu<Message, Renderer>(
+pub(super) fn layout_menu<Message, Renderer>(
     menu: &Menu<Message>,
     renderer: &Renderer,
     font: Font,
@@ -926,7 +926,7 @@ where
     layout::Node::new(Size::new(width, height)).move_to(Point::new(x, y))
 }
 
-fn measure<Renderer: text::Renderer<Font = Font>>(
+pub(super) fn measure<Renderer: text::Renderer<Font = Font>>(
     _renderer: &Renderer,
     content: &str,
     size: f32,
@@ -951,7 +951,7 @@ fn measure<Renderer: text::Renderer<Font = Font>>(
 /// horizontal ellipsis (`…`) that does fit.
 ///
 /// Returns an empty string if not even the ellipsis glyph fits.
-fn fit_with_ellipsis<Renderer: text::Renderer<Font = Font>>(
+pub(super) fn fit_with_ellipsis<Renderer: text::Renderer<Font = Font>>(
     renderer: &Renderer,
     content: &str,
     available_width: f32,
@@ -1001,7 +1001,7 @@ fn fit_with_ellipsis<Renderer: text::Renderer<Font = Font>>(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn draw_menu<Message, Renderer>(
+pub(super) fn draw_menu<Message, Renderer>(
     renderer: &mut Renderer,
     menu: &Menu<Message>,
     layout: Layout<'_>,

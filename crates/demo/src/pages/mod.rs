@@ -1,5 +1,6 @@
 mod badge;
 mod bottom_sheet;
+mod button;
 mod card;
 mod chip;
 mod colors;
@@ -125,6 +126,7 @@ pages! {
     WIDGETS {
         Badge(badge::BadgePage),
         BottomSheet(bottom_sheet::BottomSheetPage),
+        Button(button::ButtonPage),
         Card(card::CardPage),
         Chip(chip::ChipPage),
         Colors(colors::ColorsPage),
