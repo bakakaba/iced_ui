@@ -1,8 +1,10 @@
 use iced::widget::{column, text};
 use iced_ui::icon_button::{self, IconButton};
 use iced_ui::navigation_drawer::{DrawerItem, NavigationDrawer};
+use lucide_icons::Icon;
 
 use crate::Element;
+use crate::icons::lucide;
 use crate::state::ActionLog;
 
 #[derive(Debug, Clone)]
@@ -58,11 +60,11 @@ impl super::PageView for NavigationDrawerPage {
 
         NavigationDrawer::new(host)
             .push(DrawerItem::header("Navigation"))
-            .push(DrawerItem::destination("Home"))
-            .push(DrawerItem::destination("Profile"))
-            .push(DrawerItem::destination("Settings"))
+            .push(DrawerItem::destination("Home").icon(lucide(Icon::Home)))
+            .push(DrawerItem::destination("Profile").icon(lucide(Icon::User)))
+            .push(DrawerItem::destination("Settings").icon(lucide(Icon::Settings)))
             .push(DrawerItem::divider())
-            .push(DrawerItem::destination("Help"))
+            .push(DrawerItem::destination("Help").icon(lucide(Icon::CircleHelp)))
             .active(0)
             .modal(true)
             .expanded(self.expanded)

@@ -830,6 +830,7 @@ version = "0.1.1"
 dependencies = [
  "iced",
  "iced_ui",
+ "lucide-icons",
 ]
 
 [[package]]
@@ -2070,6 +2071,15 @@ name = "lru"
 version = "0.16.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f66e8d5d03f609abc3a39e6f08e4164ebf1447a732906d39eb9b99b7919ef39"
+
+[[package]]
+name = "lucide-icons"
+version = "1.16.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "27a66d4f02ea7db7e9306bb8b2556a99d2eec1e21a8371b134d33927a5d9ebb2"
+dependencies = [
+ "iced",
+]
 
 [[package]]
 name = "malloc_buf"

@@ -12,6 +12,7 @@ use iced_ui::text::Text;
 use iced_ui::theme::tokens::Information;
 
 use crate::Element;
+use crate::icons::LUCIDE_FONT;
 use crate::message::{Action, Message, PaletteField};
 use crate::pages::{self, ActivePage, Page};
 use crate::state::ActionLog;
@@ -329,13 +330,13 @@ fn file_menu() -> Menu<Message> {
     Menu::new("File")
         .push(
             Item::new("New")
-                .icon(Icon::from_text("+"))
+                .icon(Icon::from_char(char::from(lucide_icons::Icon::FilePlus)).font(LUCIDE_FONT))
                 .shortcut(KeyBinding::command('n'))
                 .on_press(Message::Triggered(Action::New)),
         )
         .push(
             Item::new("Open\u{2026}")
-                .icon(Icon::from_text("O"))
+                .icon(Icon::from_char(char::from(lucide_icons::Icon::FolderOpen)).font(LUCIDE_FONT))
                 .shortcut(KeyBinding::command('o'))
                 .on_press(Message::Triggered(Action::Open)),
         )

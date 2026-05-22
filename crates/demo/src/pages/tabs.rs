@@ -1,7 +1,9 @@
 use iced::widget::{column, text};
 use iced_ui::tabs::{Tab, Tabs};
+use lucide_icons::Icon;
 
 use crate::Element;
+use crate::icons::lucide;
 use crate::state::ActionLog;
 
 #[derive(Debug, Clone)]
@@ -27,9 +29,9 @@ impl super::PageView for TabsPage {
 
     fn view(&self, _log: &ActionLog) -> Element<'_, Msg> {
         let tabs = Tabs::new(Msg::Selected)
-            .push(Tab::new("Photos"))
-            .push(Tab::new("Videos"))
-            .push(Tab::new("Music"))
+            .push(Tab::new("Photos").icon(lucide(Icon::Image)))
+            .push(Tab::new("Videos").icon(lucide(Icon::Video)))
+            .push(Tab::new("Music").icon(lucide(Icon::Music)))
             .active(self.active);
 
         column![

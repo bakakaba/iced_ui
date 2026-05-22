@@ -6,8 +6,10 @@ use iced_ui::fab::Fab;
 use iced_ui::list;
 use iced_ui::screen::Screen;
 use iced_ui::top_app_bar::TopAppBar;
+use lucide_icons::Icon;
 
 use crate::Element;
+use crate::icons::lucide;
 use crate::state::ActionLog;
 
 #[derive(Debug, Clone)]
@@ -22,8 +24,8 @@ impl super::PageView for OverviewPage {
 
     fn view(&self, _log: &ActionLog) -> Element<'_, Msg> {
         // Top app bar
-        let nav_icon: Element<'_, Msg> = text("=").size(20).into();
-        let action: Element<'_, Msg> = text("?").size(16).into();
+        let nav_icon: Element<'_, Msg> = lucide(Icon::Menu).into();
+        let action: Element<'_, Msg> = lucide(Icon::CircleHelp).size(16).into();
         let app_bar = TopAppBar::new("My App")
             .navigation_icon(nav_icon)
             .action(action);
@@ -38,7 +40,7 @@ impl super::PageView for OverviewPage {
             .push(list::Item::new(text("Sent").size(14)));
 
         // A FAB
-        let fab = Fab::new(text("+").size(24)).label(text("Compose").size(16));
+        let fab = Fab::new(lucide(Icon::Plus).size(24)).label(text("Compose").size(16));
 
         // Divider between sections
         let divider = Divider::horizontal();

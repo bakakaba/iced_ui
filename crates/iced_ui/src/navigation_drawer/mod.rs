@@ -12,10 +12,10 @@
 //!
 //! let drawer = NavigationDrawer::new(host_content)
 //!     .push(DrawerItem::header("Mail"))
-//!     .push(DrawerItem::destination("Inbox"))
-//!     .push(DrawerItem::destination("Sent"))
+//!     .push(DrawerItem::destination("Inbox").icon(icon_inbox()))
+//!     .push(DrawerItem::destination("Sent").icon(icon_send()))
 //!     .push(DrawerItem::divider())
-//!     .push(DrawerItem::destination("Trash"))
+//!     .push(DrawerItem::destination("Trash").icon(icon_trash()))
 //!     .active(0)
 //!     .modal(true)
 //!     .expanded(self.drawer_open)
@@ -53,21 +53,33 @@ const DIVIDER_HEIGHT: f32 = 17.0;
 /// Horizontal padding inside the drawer.
 const DRAWER_PADDING: f32 = 12.0;
 
+/// Size for leading icons in drawer items.
+const ICON_SIZE: f32 = 24.0;
+
 /// An item inside the navigation drawer.
-#[derive(Debug, Clone)]
-pub enum DrawerItem {
-    /// A navigable destination with a text label.
-    Destination(String),
+///
+/// Use the constructor methods to create each variant.
+pub enum DrawerItem<'a, Message, Theme = crate::Theme, Renderer = iced::Renderer> {
+    /// A navigable destination with a text label and optional icon.
+    Destination {
+        /// Display label.
+        label: String,
+        /// Optional leading icon element.
+        icon: Option<Element<'a, Message, Theme, Renderer>>,
+    },
     /// A horizontal divider line.
     Divider,
     /// A section header with bold text.
     Header(String),
 }
 
-impl DrawerItem {
-    /// Creates a destination item.
+impl<'a, Message, Theme, Renderer> DrawerItem<'a, Message, Theme, Renderer> {
+    /// Creates a destination item with no icon.
     pub fn destination(label: impl Into<String>) -> Self {
-        Self::Destination(label.into())
+        Self::Destination {
+            label: label.into(),
+            icon: None,
+        }
     }
 
     /// Creates a divider item.
@@ -79,6 +91,20 @@ impl DrawerItem {
     pub fn header(text: impl Into<String>) -> Self {
         Self::Header(text.into())
     }
+
+    /// Sets the leading icon for a destination item.
+    ///
+    /// If called on a non-destination item, this is a no-op (returns
+    /// self unchanged).
+    pub fn icon(mut self, icon: impl Into<Element<'a, Message, Theme, Renderer>>) -> Self {
+        if let Self::Destination {
+            icon: ref mut slot, ..
+        } = self
+        {
+            *slot = Some(icon.into());
+        }
+        self
+    }
 }
 
 /// Wraps host content and conditionally displays a drawer panel from
@@ -89,7 +115,7 @@ where
     Renderer: renderer::Renderer,
 {
     host: Element<'a, Message, Theme, Renderer>,
-    items: Vec<DrawerItem>,
+    items: Vec<DrawerItem<'a, Message, Theme, Renderer>>,
     active: Option<usize>,
     modal: bool,
     expanded: bool,
@@ -118,7 +144,7 @@ where
     }
 
     /// Appends a drawer item.
-    pub fn push(mut self, item: DrawerItem) -> Self {
+    pub fn push(mut self, item: DrawerItem<'a, Message, Theme, Renderer>) -> Self {
         self.items.push(item);
         self
     }
@@ -186,11 +212,36 @@ where
     }
 
     fn children(&self) -> Vec<Tree> {
-        vec![Tree::new(&self.host)]
+        // First child is the host element, remaining children are
+        // icon elements from Destination items (one slot per item,
+        // empty if no icon or non-destination).
+        let mut children = vec![Tree::new(&self.host)];
+        for item in &self.items {
+            match item {
+                DrawerItem::Destination { icon: Some(el), .. } => {
+                    children.push(Tree::new(el));
+                }
+                _ => {
+                    children.push(Tree::empty());
+                }
+            }
+        }
+        children
     }
 
     fn diff(&self, tree: &mut Tree) {
-        tree.diff_children(std::slice::from_ref(&self.host));
+        let expected = 1 + self.items.len();
+        tree.children.resize_with(expected, Tree::empty);
+
+        // Diff host.
+        tree.children[0].diff(&self.host);
+
+        // Diff item icons.
+        for (i, item) in self.items.iter().enumerate() {
+            if let DrawerItem::Destination { icon: Some(el), .. } = item {
+                tree.children[1 + i].diff(el);
+            }
+        }
     }
 
     fn size(&self) -> Size<Length> {
@@ -311,6 +362,7 @@ where
             on_dismiss: self.on_dismiss.as_ref(),
             on_select: self.on_select.as_deref(),
             state: tree.state.downcast_mut(),
+            icon_trees: &tree.children[1..],
             style_fn: &self.class,
             viewport: *viewport,
             _renderer: std::marker::PhantomData,
@@ -324,11 +376,12 @@ where
     Theme: Catalog,
     Renderer: renderer::Renderer,
 {
-    items: &'b [DrawerItem],
+    items: &'b [DrawerItem<'a, Message, Theme, Renderer>],
     active: Option<usize>,
     on_dismiss: Option<&'b Message>,
     on_select: Option<&'b (dyn Fn(usize) -> Message + 'a)>,
     state: &'b mut DrawerState,
+    icon_trees: &'b [Tree],
     style_fn: &'b <Theme as Catalog>::Class<'a>,
     viewport: Rectangle,
     _renderer: std::marker::PhantomData<Renderer>,
@@ -336,16 +389,19 @@ where
 
 /// Returns the destination index for a given item index, or `None` if
 /// the item is not a destination.
-fn destination_index_at(items: &[DrawerItem], item_idx: usize) -> Option<usize> {
+fn destination_index_at<M, T, R>(
+    items: &[DrawerItem<'_, M, T, R>],
+    item_idx: usize,
+) -> Option<usize> {
     let mut dest_idx = 0;
     for (i, item) in items.iter().enumerate() {
         if i == item_idx {
             return match item {
-                DrawerItem::Destination(_) => Some(dest_idx),
+                DrawerItem::Destination { .. } => Some(dest_idx),
                 _ => None,
             };
         }
-        if matches!(item, DrawerItem::Destination(_)) {
+        if matches!(item, DrawerItem::Destination { .. }) {
             dest_idx += 1;
         }
     }
@@ -353,12 +409,12 @@ fn destination_index_at(items: &[DrawerItem], item_idx: usize) -> Option<usize> 
 }
 
 /// Returns the y-offset and item index for each item.
-fn item_rects(items: &[DrawerItem], drawer_y: f32) -> Vec<(usize, f32, f32)> {
+fn item_rects<M, T, R>(items: &[DrawerItem<'_, M, T, R>], drawer_y: f32) -> Vec<(usize, f32, f32)> {
     let mut y = drawer_y + DRAWER_PADDING;
     let mut rects = Vec::with_capacity(items.len());
     for (i, item) in items.iter().enumerate() {
         let h = match item {
-            DrawerItem::Destination(_) => DESTINATION_HEIGHT,
+            DrawerItem::Destination { .. } => DESTINATION_HEIGHT,
             DrawerItem::Header(_) => HEADER_HEIGHT,
             DrawerItem::Divider => DIVIDER_HEIGHT,
         };
@@ -393,7 +449,7 @@ where
         theme: &Theme,
         _style: &renderer::Style,
         layout: Layout<'_>,
-        _cursor: mouse::Cursor,
+        cursor: mouse::Cursor,
     ) {
         let drawer_style = <Theme as Catalog>::style(theme, self.style_fn);
         let bounds = layout.bounds();
@@ -428,7 +484,7 @@ where
         for (i, y, h) in &rects {
             let item = &self.items[*i];
             match item {
-                DrawerItem::Destination(label) => {
+                DrawerItem::Destination { label, icon } => {
                     let is_active = self.active == Some(dest_idx);
 
                     // Active indicator pill
@@ -458,10 +514,47 @@ where
                         drawer_style.inactive_text_color
                     };
 
+                    // Determine text x offset based on icon presence.
+                    let text_x = if icon.is_some() {
+                        drawer_bounds.x + DRAWER_PADDING * 2.0 + ICON_SIZE + 12.0
+                    } else {
+                        drawer_bounds.x + DRAWER_PADDING * 2.0
+                    };
+
+                    let text_width = if icon.is_some() {
+                        drawer_bounds.width - DRAWER_PADDING * 4.0 - ICON_SIZE - 12.0
+                    } else {
+                        drawer_bounds.width - DRAWER_PADDING * 4.0
+                    };
+
+                    // Draw icon if present.
+                    if let Some(icon_el) = icon {
+                        // We render the icon using a simple layout at the
+                        // left side of the destination row.
+                        let icon_x = drawer_bounds.x + DRAWER_PADDING * 2.0;
+                        let icon_y_center = *y + *h / 2.0 - ICON_SIZE / 2.0;
+
+                        // Create an inline layout node for the icon.
+                        let icon_node = layout::Node::new(Size::new(ICON_SIZE, ICON_SIZE))
+                            .move_to(Point::new(icon_x, icon_y_center));
+                        let icon_layout = Layout::new(&icon_node);
+
+                        let icon_style = renderer::Style { text_color };
+                        icon_el.as_widget().draw(
+                            &self.icon_trees[*i],
+                            renderer,
+                            theme,
+                            &icon_style,
+                            icon_layout,
+                            cursor,
+                            &self.viewport,
+                        );
+                    }
+
                     renderer.fill_text(
                         Text {
                             content: label.clone(),
-                            bounds: Size::new(drawer_bounds.width - DRAWER_PADDING * 4.0, *h),
+                            bounds: Size::new(text_width, *h),
                             size: Pixels(14.0),
                             line_height: text::LineHeight::Relative(1.0),
                             font: renderer.default_font(),
@@ -470,7 +563,7 @@ where
                             shaping: text::Shaping::Basic,
                             wrapping: text::Wrapping::None,
                         },
-                        Point::new(drawer_bounds.x + DRAWER_PADDING * 2.0, *y + *h / 2.0),
+                        Point::new(text_x, *y + *h / 2.0),
                         text_color,
                         drawer_bounds,
                     );

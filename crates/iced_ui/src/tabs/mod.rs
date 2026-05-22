@@ -6,8 +6,8 @@
 //! use iced_ui::tabs::{Tab, Tabs};
 //!
 //! let tabs = Tabs::new(Message::TabSelected)
-//!     .push(Tab::new("Day"))
-//!     .push(Tab::new("Week"))
+//!     .push(Tab::new("Day").icon(text("D").font(MY_ICON_FONT)))
+//!     .push(Tab::new("Week").icon(text("W").font(MY_ICON_FONT)))
 //!     .push(Tab::new("Month"))
 //!     .active(selected_index);
 //! ```
@@ -25,25 +25,44 @@ use std::marker::PhantomData;
 
 use iced::{Background, Color, Element, Event, Length, Rectangle, Size};
 
-/// Height of a tab cell in logical pixels (MD3 spec).
+/// Height of a tab cell in logical pixels (label-only).
 const TAB_HEIGHT: f32 = 48.0;
+
+/// Height of a tab cell when an icon is present (MD3 primary tabs).
+const TAB_HEIGHT_WITH_ICON: f32 = 64.0;
+
+/// Size allocated for the icon inside a tab cell.
+const ICON_SIZE: f32 = 24.0;
 
 /// Thickness of the active indicator line in logical pixels.
 const INDICATOR_HEIGHT: f32 = 3.0;
 
 /// A single tab within a [`Tabs`] widget.
 ///
-/// Contains a text label.
-pub struct Tab {
+/// Contains a text label and an optional icon element.
+pub struct Tab<'a, Message, Theme = crate::Theme, Renderer = iced::Renderer> {
     label: String,
+    icon: Option<Element<'a, Message, Theme, Renderer>>,
 }
 
-impl Tab {
+impl<'a, Message, Theme, Renderer> Tab<'a, Message, Theme, Renderer> {
     /// Creates a new tab with the given label.
     pub fn new(label: impl Into<String>) -> Self {
         Self {
             label: label.into(),
+            icon: None,
         }
+    }
+
+    /// Sets the icon element for this tab.
+    ///
+    /// The icon is rendered centered above the text label. Any iced
+    /// widget can be used — typically a `text()` glyph from an icon
+    /// font. When any tab has an icon, the tab row height increases
+    /// to accommodate the icon.
+    pub fn icon(mut self, icon: impl Into<Element<'a, Message, Theme, Renderer>>) -> Self {
+        self.icon = Some(icon.into());
+        self
     }
 }
 
@@ -66,7 +85,7 @@ where
     Theme: Catalog,
     Renderer: renderer::Renderer + iced::advanced::text::Renderer,
 {
-    tabs: Vec<Tab>,
+    tabs: Vec<Tab<'a, Message, Theme, Renderer>>,
     active: usize,
     on_select: Box<dyn Fn(usize) -> Message + 'a>,
     class: Theme::Class<'a>,
@@ -94,7 +113,7 @@ where
     }
 
     /// Appends a [`Tab`] to the row.
-    pub fn push(mut self, tab: Tab) -> Self {
+    pub fn push(mut self, tab: Tab<'a, Message, Theme, Renderer>) -> Self {
         self.tabs.push(tab);
         self
     }
@@ -116,6 +135,20 @@ where
         self.width = width.into();
         self
     }
+
+    /// Whether any tab has an icon (determines row height).
+    fn has_any_icon(&self) -> bool {
+        self.tabs.iter().any(|t| t.icon.is_some())
+    }
+
+    /// The effective row height based on icon presence.
+    fn row_height(&self) -> f32 {
+        if self.has_any_icon() {
+            TAB_HEIGHT_WITH_ICON
+        } else {
+            TAB_HEIGHT
+        }
+    }
 }
 
 impl<'a, Message, Theme, Renderer> Widget<Message, Theme, Renderer>
@@ -136,40 +169,80 @@ where
     }
 
     fn children(&self) -> Vec<Tree> {
-        Vec::new()
+        self.tabs
+            .iter()
+            .map(|tab| match &tab.icon {
+                Some(icon) => Tree::new(icon),
+                None => Tree::empty(),
+            })
+            .collect()
     }
 
     fn diff(&self, tree: &mut Tree) {
         let state = tree.state.downcast_mut::<State>();
         state.tabs.resize_with(self.tabs.len(), Default::default);
+
+        // Diff icon children.
+        tree.children.resize_with(self.tabs.len(), Tree::empty);
+        for (i, tab) in self.tabs.iter().enumerate() {
+            if let Some(icon) = &tab.icon {
+                tree.children[i].diff(icon);
+            }
+        }
     }
 
     fn size(&self) -> Size<Length> {
-        Size::new(self.width, Length::Fixed(TAB_HEIGHT))
+        Size::new(self.width, Length::Fixed(self.row_height()))
     }
 
     fn layout(
         &mut self,
-        _tree: &mut Tree,
-        _renderer: &Renderer,
+        tree: &mut Tree,
+        renderer: &Renderer,
         limits: &layout::Limits,
     ) -> layout::Node {
         let tab_count = self.tabs.len();
         if tab_count == 0 {
-            return layout::Node::new(Size::new(0.0, TAB_HEIGHT));
+            return layout::Node::new(Size::new(0.0, self.row_height()));
         }
 
+        let row_height = self.row_height();
         let total_width = limits.resolve(self.width, Length::Shrink, Size::ZERO).width;
         let cell_width = total_width / tab_count as f32;
 
         let mut children = Vec::with_capacity(tab_count);
         for i in 0..tab_count {
-            let mut node = layout::Node::new(Size::new(cell_width, TAB_HEIGHT));
-            node = node.move_to(iced::Point::new(cell_width * i as f32, 0.0));
-            children.push(node);
+            // Layout the icon if present.
+            let icon_child = if let Some(icon) = &mut self.tabs[i].icon {
+                let icon_limits = layout::Limits::new(Size::ZERO, Size::new(ICON_SIZE, ICON_SIZE));
+                let icon_node =
+                    icon.as_widget_mut()
+                        .layout(&mut tree.children[i], renderer, &icon_limits);
+                Some(icon_node)
+            } else {
+                None
+            };
+
+            let mut cell_children = Vec::new();
+
+            // Position the icon centered horizontally, in the upper portion.
+            if let Some(mut icon_node) = icon_child {
+                let icon_w = icon_node.size().width;
+                let icon_h = icon_node.size().height;
+                let icon_x = (cell_width - icon_w) / 2.0;
+                // Place icon at ~12px from top of cell.
+                let icon_y = 12.0 + (ICON_SIZE - icon_h) / 2.0;
+                icon_node = icon_node.move_to(iced::Point::new(icon_x, icon_y));
+                cell_children.push(icon_node);
+            }
+
+            let mut cell_node =
+                layout::Node::with_children(Size::new(cell_width, row_height), cell_children);
+            cell_node = cell_node.move_to(iced::Point::new(cell_width * i as f32, 0.0));
+            children.push(cell_node);
         }
 
-        layout::Node::with_children(Size::new(total_width, TAB_HEIGHT), children)
+        layout::Node::with_children(Size::new(total_width, row_height), children)
     }
 
     fn draw(
@@ -177,21 +250,22 @@ where
         tree: &Tree,
         renderer: &mut Renderer,
         theme: &Theme,
-        _style: &renderer::Style,
+        style: &renderer::Style,
         layout: Layout<'_>,
-        _cursor: mouse::Cursor,
-        _viewport: &Rectangle,
+        cursor: mouse::Cursor,
+        viewport: &Rectangle,
     ) {
-        let style = Catalog::style(theme, &self.class);
+        let tab_style = Catalog::style(theme, &self.class);
         let state = tree.state.downcast_ref::<State>();
         let bounds = layout.bounds();
+        let has_icons = self.has_any_icon();
 
         // Draw the row background if set.
-        if let Some(bg) = style.background {
+        if let Some(bg) = tab_style.background {
             renderer.fill_quad(
                 renderer::Quad {
                     bounds,
-                    border: style.border,
+                    border: tab_style.border,
                     ..renderer::Quad::default()
                 },
                 bg,
@@ -216,7 +290,7 @@ where
             if status == TabStatus::Hovered {
                 let hover_color = Color {
                     a: 0.08,
-                    ..style.active_indicator_color
+                    ..tab_style.active_indicator_color
                 };
                 renderer.fill_quad(
                     renderer::Quad {
@@ -227,16 +301,43 @@ where
                 );
             }
 
-            // Text label — centered in cell.
+            // Text and icon color.
             let text_color = if is_active {
-                style.active_text_color
+                tab_style.active_text_color
             } else {
-                style.inactive_text_color
+                tab_style.inactive_text_color
+            };
+
+            // Draw the icon element if present.
+            if let Some(icon_el) = &tab.icon
+                && let Some(icon_layout) = cell_layout.children().next()
+            {
+                let icon_style = renderer::Style { text_color };
+                icon_el.as_widget().draw(
+                    &tree.children[i],
+                    renderer,
+                    theme,
+                    &icon_style,
+                    icon_layout,
+                    cursor,
+                    viewport,
+                );
+            }
+
+            // Text label — centered in cell. When icons are present,
+            // the label sits in the lower portion.
+            let (text_y, text_bounds_height) = if has_icons {
+                // Icon occupies top ~36px, label occupies the rest
+                let label_top = 12.0 + ICON_SIZE + 4.0; // 40px from top
+                let label_h = cell_bounds.height - label_top - INDICATOR_HEIGHT;
+                (cell_bounds.y + label_top + label_h / 2.0, label_h)
+            } else {
+                (cell_bounds.center_y(), cell_bounds.height)
             };
 
             let text = iced::advanced::text::Text {
                 content: tab.label.clone(),
-                bounds: Size::new(cell_bounds.width, cell_bounds.height),
+                bounds: Size::new(cell_bounds.width, text_bounds_height),
                 size: renderer.default_size(),
                 line_height: iced::advanced::text::LineHeight::default(),
                 font: renderer.default_font(),
@@ -248,7 +349,7 @@ where
 
             renderer.fill_text(
                 text,
-                iced::Point::new(cell_bounds.center_x(), cell_bounds.center_y()),
+                iced::Point::new(cell_bounds.center_x(), text_y),
                 text_color,
                 cell_bounds,
             );
@@ -266,10 +367,13 @@ where
                         bounds: indicator_bounds,
                         ..renderer::Quad::default()
                     },
-                    Background::Color(style.active_indicator_color),
+                    Background::Color(tab_style.active_indicator_color),
                 );
             }
         }
+
+        // Suppress unused variable warning.
+        let _ = style;
     }
 
     fn update(
@@ -327,7 +431,7 @@ where
         _renderer: &Renderer,
         _operation: &mut dyn iced::advanced::widget::Operation,
     ) {
-        // No child elements to propagate to.
+        // Icons are non-interactive leaf elements.
     }
 }
 
