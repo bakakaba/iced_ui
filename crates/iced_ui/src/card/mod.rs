@@ -125,6 +125,7 @@ where
     background: Option<Background>,
     background_image: Option<BackgroundImage>,
     image_fit: ContentFit,
+    roundness_override: Option<f32>,
     class: <Theme as Catalog>::Class<'a>,
     _renderer: PhantomData<Renderer>,
 }
@@ -152,6 +153,7 @@ where
             background: None,
             background_image: None,
             image_fit: ContentFit::Cover,
+            roundness_override: None,
             class: <Theme as Catalog>::default(),
             _renderer: PhantomData,
         }
@@ -223,6 +225,14 @@ where
     /// Defaults to [`ContentFit::Cover`].
     pub fn image_fit(mut self, fit: ContentFit) -> Self {
         self.image_fit = fit;
+        self
+    }
+
+    /// Overrides the corner roundness of the [`Card`] in logical
+    /// pixels, bypassing the theme's roundness setting. Set to `0` for
+    /// sharp corners.
+    pub fn roundness(mut self, roundness: impl Into<Pixels>) -> Self {
+        self.roundness_override = Some(roundness.into().0);
         self
     }
 
@@ -399,7 +409,12 @@ where
             return;
         };
 
-        let style = theme.style(&self.class, self.variant);
+        let mut style = theme.style(&self.class, self.variant);
+
+        // Apply the roundness override if set.
+        if let Some(r) = self.roundness_override {
+            style.border.radius = r.into();
+        }
 
         // Refresh the padding cache against the active theme so the
         // next layout sees the most recent spacing base.

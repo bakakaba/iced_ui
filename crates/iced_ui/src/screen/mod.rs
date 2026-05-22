@@ -95,7 +95,7 @@ where
     /// Create a new [`Screen`] with the given content in [`Mode::Desktop`].
     pub fn new(content: impl Into<Element<'a, Message, Theme, Renderer>>) -> Self {
         let mode = Mode::Desktop;
-        let card = Card::new(content).padding(Padding::ZERO);
+        let card = Card::new(content).padding(Padding::ZERO).roundness(0);
         Self {
             card,
             aspect: mode.default_aspect(),
