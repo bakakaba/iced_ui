@@ -12,14 +12,6 @@ pub struct Style {
     pub bar_background: Background,
     /// Border of the horizontal bar.
     pub bar_border: Border,
-    /// Text color of top-level (bar) labels in their idle state.
-    pub bar_text: Color,
-    /// Background applied to a top-level label when it is hovered or
-    /// when its dropdown is open.
-    pub bar_item_background_active: Background,
-    /// Text color applied to a top-level label when it is hovered or
-    /// when its dropdown is open.
-    pub bar_text_active: Color,
     /// Border radius applied to hover/active highlight backgrounds
     /// (both the top-level bar items and the rows inside dropdown
     /// popups), in logical pixels.
@@ -108,13 +100,6 @@ pub fn default(theme: &Theme) -> Style {
             width: 0.0,
             color: Color::TRANSPARENT,
         },
-        bar_text: palette.primary.base.color,
-        bar_item_background_active: Color {
-            a: 0.15,
-            ..palette.primary.base.color
-        }
-        .into(),
-        bar_text_active: palette.primary.base.color,
         item_radius: theme.radius(Roundness::sx(2.0)),
 
         menu_background: palette.background.base.color.into(),

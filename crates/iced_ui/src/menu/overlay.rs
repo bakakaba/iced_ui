@@ -65,12 +65,13 @@ where
     Renderer: text::Renderer<Font = Font>,
 {
     pub(super) menus: &'b mut [Menu<Message>],
-    pub(super) state: &'b mut State<Renderer::Paragraph>,
+    pub(super) state: &'b mut State,
     pub(super) bar_bounds: Rectangle,
     pub(super) bar_label_bounds: Vec<Rectangle>,
     pub(super) metrics: Metrics,
     pub(super) font: Font,
     pub(super) style_fn: &'b <Theme as Catalog>::Class<'a>,
+    pub(super) _renderer: std::marker::PhantomData<Renderer>,
 }
 
 impl<Message, Theme, Renderer> Overlay<Message, Theme, Renderer>
@@ -1078,7 +1079,8 @@ pub(super) fn draw_menu<Message, Renderer>(
             );
         }
 
-        let text_y = y + (metrics.row_height - metrics.text_size) / 2.0;
+        let text_line_height = (metrics.text_size * 1.3).ceil();
+        let text_y = y + (metrics.row_height - text_line_height) / 2.0;
 
         match entry {
             Entry::Item(item) => {
@@ -1180,8 +1182,8 @@ pub(super) fn draw_menu<Message, Renderer>(
                 );
 
                 if let Some(text) = shortcut_text {
-                    let shortcut_text_y =
-                        y + (metrics.row_height - metrics.shortcut_text_size) / 2.0;
+                    let shortcut_line_height = (metrics.shortcut_text_size * 1.3).ceil();
+                    let shortcut_text_y = y + (metrics.row_height - shortcut_line_height) / 2.0;
                     renderer.fill_text(
                         Text {
                             content: text,

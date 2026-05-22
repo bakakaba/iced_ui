@@ -25,7 +25,7 @@
 
 mod style;
 
-pub use style::{ButtonSize, Catalog, Status, Style, StyleFn, Variant, default};
+pub use style::{ButtonColor, ButtonSize, Catalog, Status, Style, StyleFn, Variant, default};
 
 use iced::advanced::layout::{self, Layout};
 use iced::advanced::renderer;
@@ -54,8 +54,10 @@ where
     content: Element<'a, Message, Theme, Renderer>,
     variant: Variant,
     btn_size: ButtonSize,
+    btn_color: ButtonColor,
     on_press: Option<Message>,
     enabled: bool,
+    focused: bool,
     class: Theme::Class<'a>,
 }
 
@@ -70,8 +72,10 @@ where
             content: content.into(),
             variant: Variant::default(),
             btn_size: ButtonSize::default(),
+            btn_color: ButtonColor::default(),
             on_press: None,
             enabled: true,
+            focused: false,
             class: Theme::default(),
         }
     }
@@ -85,6 +89,12 @@ where
     /// Sets the size.
     pub fn size(mut self, size: ButtonSize) -> Self {
         self.btn_size = size;
+        self
+    }
+
+    /// Sets the color token.
+    pub fn color(mut self, color: ButtonColor) -> Self {
+        self.btn_color = color;
         self
     }
 
@@ -103,6 +113,13 @@ where
     /// Enables or disables the button.
     pub fn enabled(mut self, enabled: bool) -> Self {
         self.enabled = enabled;
+        self
+    }
+
+    /// Sets the focused state. A focused button shows a subtle
+    /// highlight even when the cursor is not over it.
+    pub fn focused(mut self, focused: bool) -> Self {
+        self.focused = focused;
         self
     }
 
@@ -196,11 +213,20 @@ where
             Status::Pressed
         } else if is_over {
             Status::Hovered
+        } else if self.focused {
+            Status::Focused
         } else {
             Status::Active
         };
 
-        let btn_style = Catalog::style(theme, &self.class, self.variant, self.btn_size, status);
+        let btn_style = Catalog::style(
+            theme,
+            &self.class,
+            self.variant,
+            self.btn_size,
+            self.btn_color,
+            status,
+        );
 
         // Draw background.
         renderer.fill_quad(
@@ -288,6 +314,8 @@ where
             Status::Pressed
         } else if is_over {
             Status::Hovered
+        } else if self.focused {
+            Status::Focused
         } else {
             Status::Active
         };

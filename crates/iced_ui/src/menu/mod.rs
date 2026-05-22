@@ -12,72 +12,50 @@ mod style;
 mod trigger;
 
 use std::cell::Cell;
-use std::marker::PhantomData;
 
 use iced::advanced::layout::{self, Layout};
 use iced::advanced::overlay as advanced_overlay;
 use iced::advanced::renderer;
-use iced::advanced::text::{self, Paragraph, Text};
+use iced::advanced::text::{self};
 use iced::advanced::widget::{Tree, Widget, tree};
 use iced::advanced::{Clipboard, Shell};
-use iced::alignment;
 use iced::mouse;
-use iced::{
-    Border, Color, Element, Event, Font, Length, Padding, Pixels, Point, Rectangle, Size, Vector,
-};
+use iced::widget::text as iced_text;
+use iced::{Element, Event, Font, Length, Padding, Pixels, Point, Rectangle, Size, Vector};
 
 pub use item::{Entry, Icon, Item, Menu, Separator};
 pub use shortcut::{KeyBinding, shortcuts};
 pub use style::{Catalog, Style, StyleFn, default};
 pub use trigger::MenuButton;
 
-use crate::{PaddingSource, SpacingBase};
+use crate::button::{self, Button, Variant};
+use crate::{PaddingSource, RoundnessBase, SpacingBase};
 
 use item::collect_shortcuts;
 use overlay::{MenuOverlay, Metrics};
 
-/// Cached state for a single bar label.
-#[derive(Debug, Default)]
-struct BarLabel<P: Paragraph> {
-    paragraph: P,
-    content: String,
-}
-
 /// Internal widget state stored in the widget tree.
 #[derive(Debug)]
-pub(crate) struct State<P: Paragraph> {
-    /// Per top-level menu cached paragraph.
-    bar_labels: Vec<BarLabel<P>>,
+pub(crate) struct State {
     /// Path of currently-open menus. `None` means closed.
     pub(crate) open_path: Option<Vec<usize>>,
     /// Index of the top-level bar label that is visually "active"
     /// (currently open or pressed).
     pub(crate) bar_active: Option<usize>,
     /// Index of the top-level bar label currently under the cursor
-    /// (when the bar is closed). Tracked in state so that `draw` can
-    /// render hover deterministically and `update` can request redraws
-    /// only when the hovered label changes.
+    /// (when the bar is closed).
     pub(crate) bar_hover: Option<usize>,
     /// Rows of menus that the cursor is currently hovering, per depth.
-    /// Length matches `open_path.len()` when open.
     pub(crate) hover_path: Vec<Option<usize>>,
-    /// Last-resolved `Style::spacing`, cached so that hooks that do not
-    /// have access to `&Theme` (layout, update, mouse_interaction,
-    /// overlay) can stay consistent with the most recent draw. Kept in
-    /// a [`Cell`] so `draw`, which only sees `&State`, can refresh it.
+    /// Last-resolved `Style::spacing`, cached for use in overlay.
     pub(crate) spacing_cache: Cell<f32>,
-    /// Last-resolved padding (in logical pixels), cached for the same
-    /// reason as [`spacing_cache`](Self::spacing_cache). The widget
-    /// stores its padding as a [`PaddingSource`] (which may be a
-    /// themed [`Space`] token); resolution requires `&Theme`, so we
-    /// cache the resolved value here.
+    /// Last-resolved padding (in logical pixels), cached for overlay.
     pub(crate) padding_cache: Cell<Padding>,
 }
 
-impl<P: Paragraph> Default for State<P> {
+impl Default for State {
     fn default() -> Self {
         Self {
-            bar_labels: Vec::new(),
             open_path: None,
             bar_active: None,
             bar_hover: None,
@@ -88,7 +66,7 @@ impl<P: Paragraph> Default for State<P> {
     }
 }
 
-impl<P: Paragraph> State<P> {
+impl State {
     pub(crate) fn close(&mut self) {
         self.open_path = None;
         self.hover_path.clear();
@@ -101,46 +79,56 @@ impl<P: Paragraph> State<P> {
 /// [`MenuBar::shortcuts`] for how to wire up keyboard shortcuts.
 pub struct MenuBar<'a, Message, Theme = crate::Theme, Renderer = iced::Renderer>
 where
-    Theme: Catalog,
-    Renderer: text::Renderer<Font = Font>,
+    Theme: Catalog + button::Catalog + SpacingBase + RoundnessBase + iced::widget::text::Catalog,
+    Renderer: renderer::Renderer + text::Renderer<Font = Font>,
 {
     menus: Vec<Menu<Message>>,
+    triggers: Vec<Element<'a, Message, Theme, Renderer>>,
     width: Length,
     padding: PaddingSource,
     text_size: Option<Pixels>,
     font: Option<Font>,
     class: <Theme as Catalog>::Class<'a>,
-    _renderer: PhantomData<Renderer>,
 }
 
 impl<'a, Message, Theme, Renderer> MenuBar<'a, Message, Theme, Renderer>
 where
-    Theme: Catalog,
-    Renderer: text::Renderer<Font = Font>,
+    Message: Clone + 'a,
+    Theme:
+        Catalog + button::Catalog + SpacingBase + RoundnessBase + iced::widget::text::Catalog + 'a,
+    Renderer: renderer::Renderer + text::Renderer<Font = Font> + 'a,
 {
     /// Creates an empty [`MenuBar`].
     pub fn new() -> Self {
         Self {
             menus: Vec::new(),
+            triggers: Vec::new(),
             width: Length::Fill,
             padding: PaddingSource::from(crate::Space::sx(1.0)),
             text_size: None,
             font: None,
             class: <Theme as Catalog>::default(),
-            _renderer: PhantomData,
         }
     }
 
     /// Creates a [`MenuBar`] pre-populated with the given top-level menus.
     pub fn with_menus(menus: Vec<Menu<Message>>) -> Self {
-        Self {
-            menus,
-            ..Self::new()
+        let mut bar = Self::new();
+        for menu in menus {
+            bar = bar.push(menu);
         }
+        bar
     }
 
     /// Appends a top-level [`Menu`] to this bar.
     pub fn push(mut self, menu: Menu<Message>) -> Self {
+        let label = menu.label.clone();
+        let trigger: Element<'a, Message, Theme, Renderer> = Button::new(iced_text(label))
+            .variant(Variant::Ghost)
+            .size(button::ButtonSize::Sm)
+            .color(button::ButtonColor::Foreground)
+            .into();
+        self.triggers.push(trigger);
         self.menus.push(menu);
         self
     }
@@ -165,13 +153,13 @@ where
         self
     }
 
-    /// Sets the text size used for bar labels and menu items.
+    /// Sets the text size used for menu items in dropdowns.
     pub fn text_size(mut self, size: impl Into<Pixels>) -> Self {
         self.text_size = Some(size.into());
         self
     }
 
-    /// Sets the font used for bar labels and menu items.
+    /// Sets the font used for menu items in dropdowns.
     pub fn font(mut self, font: impl Into<Font>) -> Self {
         self.font = Some(font.into());
         self
@@ -180,8 +168,8 @@ where
 
 impl<'a, Message, Renderer> MenuBar<'a, Message, crate::Theme, Renderer>
 where
-    Message: Clone,
-    Renderer: text::Renderer<Font = Font>,
+    Message: Clone + 'a,
+    Renderer: renderer::Renderer + text::Renderer<Font = Font> + 'a,
 {
     /// Sets the style of the bar using a `Fn(&Theme) -> Style` closure.
     ///
@@ -192,10 +180,10 @@ where
     }
 }
 
-impl<Message: Clone, Theme, Renderer> MenuBar<'_, Message, Theme, Renderer>
+impl<Message: Clone + 'static, Theme, Renderer> MenuBar<'_, Message, Theme, Renderer>
 where
-    Theme: Catalog,
-    Renderer: text::Renderer<Font = Font>,
+    Theme: Catalog + button::Catalog + SpacingBase + RoundnessBase + iced::widget::text::Catalog,
+    Renderer: renderer::Renderer + text::Renderer<Font = Font>,
 {
     /// Returns the list of all `(KeyBinding, Message)` pairs declared
     /// on items within this bar (including inside nested submenus).
@@ -211,8 +199,14 @@ where
 
 impl<Message, Theme, Renderer> Default for MenuBar<'_, Message, Theme, Renderer>
 where
-    Theme: Catalog,
-    Renderer: text::Renderer<Font = Font>,
+    Message: Clone + 'static,
+    Theme: Catalog
+        + button::Catalog
+        + SpacingBase
+        + RoundnessBase
+        + iced::widget::text::Catalog
+        + 'static,
+    Renderer: renderer::Renderer + text::Renderer<Font = Font> + 'static,
 {
     fn default() -> Self {
         Self::new()
@@ -222,25 +216,30 @@ where
 impl<'a, Message, Theme, Renderer> Widget<Message, Theme, Renderer>
     for MenuBar<'a, Message, Theme, Renderer>
 where
-    Message: Clone,
-    Theme: Catalog + SpacingBase,
-    Renderer: text::Renderer<Font = Font>,
+    Message: Clone + 'a,
+    Theme:
+        Catalog + button::Catalog + SpacingBase + RoundnessBase + iced::widget::text::Catalog + 'a,
+    Renderer: renderer::Renderer + text::Renderer<Font = Font> + 'a,
 {
     fn tag(&self) -> tree::Tag {
-        tree::Tag::of::<State<Renderer::Paragraph>>()
+        tree::Tag::of::<State>()
     }
 
     fn state(&self) -> tree::State {
-        // Pre-seed caches so the very first layout — which has no
-        // access to `&Theme` — still produces sensible values. `draw`
-        // refreshes both caches against the active theme on every
-        // frame.
         let initial_padding = self.padding.resolve(crate::Theme::DEFAULT_SPACING);
-        let state = State::<Renderer::Paragraph> {
+        let state = State {
             padding_cache: Cell::new(initial_padding),
-            ..State::<Renderer::Paragraph>::default()
+            ..State::default()
         };
         tree::State::new(state)
+    }
+
+    fn children(&self) -> Vec<Tree> {
+        self.triggers.iter().map(Tree::new).collect()
+    }
+
+    fn diff(&self, tree: &mut Tree) {
+        tree.diff_children(&self.triggers.iter().collect::<Vec<_>>());
     }
 
     fn size(&self) -> Size<Length> {
@@ -256,57 +255,64 @@ where
         renderer: &Renderer,
         limits: &layout::Limits,
     ) -> layout::Node {
-        let state = tree.state.downcast_mut::<State<Renderer::Paragraph>>();
-
-        let text_size = self.text_size.unwrap_or_else(|| renderer.default_size()).0;
-        let font = self.font.unwrap_or_else(|| renderer.default_font());
+        let state = tree.state.downcast_mut::<State>();
         let spacing = state.spacing_cache.get();
         let padding = state.padding_cache.get();
-        let metrics = Metrics::new(text_size, padding, spacing);
+        let active = state.bar_active;
 
-        // Resize cached bar-label paragraphs to match.
-        if state.bar_labels.len() != self.menus.len() {
-            state
-                .bar_labels
-                .resize_with(self.menus.len(), BarLabel::default);
-        }
+        // Rebuild triggers with the correct focused state.
+        self.triggers = self
+            .menus
+            .iter()
+            .enumerate()
+            .map(|(i, menu)| {
+                Button::new(iced_text(menu.label.clone()))
+                    .variant(Variant::Ghost)
+                    .size(button::ButtonSize::Sm)
+                    .color(button::ButtonColor::Foreground)
+                    .focused(active == Some(i))
+                    .into()
+            })
+            .collect();
 
-        for (slot, menu) in state.bar_labels.iter_mut().zip(&self.menus) {
-            if slot.content != menu.label {
-                slot.content = menu.label.clone();
-                slot.paragraph = Renderer::Paragraph::with_text(Text {
-                    content: &slot.content,
-                    bounds: Size::new(f32::INFINITY, f32::INFINITY),
-                    size: Pixels(text_size),
-                    line_height: text::LineHeight::default(),
-                    font,
-                    align_x: text::Alignment::Default,
-                    align_y: alignment::Vertical::Top,
-                    shaping: text::Shaping::Advanced,
-                    wrapping: text::Wrapping::None,
-                });
+        // Diff children to match rebuilt triggers.
+        tree.diff_children(&self.triggers.iter().collect::<Vec<_>>());
+
+        // Layout each trigger button.
+        let child_limits = layout::Limits::new(Size::ZERO, limits.max());
+        let mut children_nodes = Vec::with_capacity(self.triggers.len());
+        let mut x = padding.left;
+        let trigger_count = self.triggers.len();
+
+        for (i, trigger) in self.triggers.iter_mut().enumerate() {
+            let mut node =
+                trigger
+                    .as_widget_mut()
+                    .layout(&mut tree.children[i], renderer, &child_limits);
+            node = node.move_to(Point::new(x, padding.top));
+            x += node.size().width;
+            if i + 1 < trigger_count {
+                x += spacing;
             }
+            children_nodes.push(node);
         }
 
-        let bar_height = metrics.row_height;
+        x += padding.right;
+
+        let bar_height = children_nodes
+            .iter()
+            .map(|n| n.size().height)
+            .fold(0.0_f32, f32::max)
+            + padding.top
+            + padding.bottom;
 
         let max_width = limits.max().width;
         let width = match self.width {
-            Length::Shrink => {
-                let mut w = padding.left + padding.right;
-                let n = state.bar_labels.len();
-                for slot in &state.bar_labels {
-                    w += slot.paragraph.min_width() + padding.left + padding.right;
-                }
-                if n > 1 {
-                    w += spacing * (n as f32 - 1.0);
-                }
-                w.min(max_width)
-            }
+            Length::Shrink => x.min(max_width),
             _ => max_width,
         };
 
-        layout::Node::new(Size::new(width, bar_height))
+        layout::Node::with_children(Size::new(width, bar_height), children_nodes)
     }
 
     fn draw(
@@ -314,92 +320,41 @@ where
         tree: &Tree,
         renderer: &mut Renderer,
         theme: &Theme,
-        _style: &renderer::Style,
+        style: &renderer::Style,
         layout: Layout<'_>,
-        _cursor: mouse::Cursor,
+        cursor: mouse::Cursor,
         viewport: &Rectangle,
     ) {
-        let state = tree.state.downcast_ref::<State<Renderer::Paragraph>>();
-        let style = theme.style(&self.class);
-        state.spacing_cache.set(style.spacing);
+        let state = tree.state.downcast_ref::<State>();
+        let menu_style = Catalog::style(theme, &self.class);
+        state.spacing_cache.set(menu_style.spacing);
         let padding = self.padding.resolve(theme.spacing());
         state.padding_cache.set(padding);
         let bounds = layout.bounds();
 
+        // Draw bar background.
         renderer.fill_quad(
             renderer::Quad {
                 bounds,
-                border: style.bar_border,
+                border: menu_style.bar_border,
                 ..renderer::Quad::default()
             },
-            style.bar_background,
+            menu_style.bar_background,
         );
 
-        let text_size = self.text_size.unwrap_or_else(|| renderer.default_size()).0;
-        let font = self.font.unwrap_or_else(|| renderer.default_font());
-
-        let mut x = bounds.x + padding.left;
-        let last_index = state.bar_labels.len().saturating_sub(1);
-        for (i, slot) in state.bar_labels.iter().enumerate() {
-            let w = slot.paragraph.min_width();
-            let label_bounds = Rectangle {
-                x,
-                y: bounds.y,
-                width: w + padding.left + padding.right,
-                height: bounds.height,
-            };
-
-            let is_active = state.bar_active == Some(i);
-            let is_hovered = state.bar_hover == Some(i);
-
-            let (bg, text_color) = if is_active || is_hovered {
-                (
-                    Some(style.bar_item_background_active),
-                    style.bar_text_active,
-                )
-            } else {
-                (None, style.bar_text)
-            };
-
-            if let Some(bg) = bg {
-                renderer.fill_quad(
-                    renderer::Quad {
-                        bounds: label_bounds,
-                        border: Border {
-                            radius: style.item_radius.into(),
-                            width: 0.0,
-                            color: Color::TRANSPARENT,
-                        },
-                        ..renderer::Quad::default()
-                    },
-                    bg,
-                );
-            }
-
-            renderer.fill_text(
-                Text {
-                    content: slot.content.clone(),
-                    bounds: Size::new(w, text_size),
-                    size: Pixels(text_size),
-                    line_height: text::LineHeight::default(),
-                    font,
-                    align_x: text::Alignment::Default,
-                    align_y: alignment::Vertical::Top,
-                    shaping: text::Shaping::Advanced,
-                    wrapping: text::Wrapping::None,
-                },
-                Point::new(
-                    label_bounds.x + padding.left,
-                    label_bounds.y + (label_bounds.height - text_size) / 2.0,
-                ),
-                text_color,
-                *viewport,
+        // Draw child trigger buttons.
+        for ((i, child_layout), child_tree) in
+            layout.children().enumerate().zip(tree.children.iter())
+        {
+            self.triggers[i].as_widget().draw(
+                child_tree,
+                renderer,
+                theme,
+                style,
+                child_layout,
+                cursor,
+                viewport,
             );
-
-            x += label_bounds.width;
-            if i < last_index {
-                x += style.spacing;
-            }
         }
     }
 
@@ -409,58 +364,80 @@ where
         event: &Event,
         layout: Layout<'_>,
         cursor: mouse::Cursor,
-        _renderer: &Renderer,
-        _clipboard: &mut dyn Clipboard,
+        renderer: &Renderer,
+        clipboard: &mut dyn Clipboard,
         shell: &mut Shell<'_, Message>,
-        _viewport: &Rectangle,
+        viewport: &Rectangle,
     ) {
-        let state = tree.state.downcast_mut::<State<Renderer::Paragraph>>();
-        let bounds = layout.bounds();
-        let spacing = state.spacing_cache.get();
-        let padding = state.padding_cache.get();
-        let label_bounds = compute_bar_label_bounds(state, bounds, padding, spacing);
+        let state = tree.state.downcast_mut::<State>();
+
+        // Compute child bounds for hit-testing.
+        let child_bounds: Vec<Rectangle> = layout.children().map(|l| l.bounds()).collect();
 
         match event {
             Event::Mouse(mouse::Event::CursorMoved { .. }) => {
                 let new_hover = cursor
                     .position()
-                    .and_then(|pos| label_bounds.iter().position(|label| label.contains(pos)));
+                    .and_then(|pos| child_bounds.iter().position(|b| b.contains(pos)));
+
+                // If a menu is already open and the user hovers a
+                // different trigger, switch to that menu immediately.
+                if state.open_path.is_some()
+                    && let Some(i) = new_hover
+                    && state.bar_active != Some(i)
+                {
+                    state.open_path = Some(vec![i]);
+                    state.bar_active = Some(i);
+                    state.hover_path = vec![Some(i)];
+                    shell.request_redraw();
+                }
+
                 if state.bar_hover != new_hover {
                     state.bar_hover = new_hover;
                     shell.request_redraw();
                 }
-                return;
             }
-            Event::Mouse(mouse::Event::CursorLeft) => {
-                if state.bar_hover.is_some() {
-                    state.bar_hover = None;
-                    shell.request_redraw();
+            Event::Mouse(mouse::Event::CursorLeft) if state.bar_hover.is_some() => {
+                state.bar_hover = None;
+                shell.request_redraw();
+            }
+            Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) => {
+                if let Some(pos) = cursor.position() {
+                    for (i, b) in child_bounds.iter().enumerate() {
+                        if b.contains(pos) {
+                            if state.open_path == Some(vec![i]) {
+                                // Toggle off.
+                                state.close();
+                                state.bar_active = None;
+                            } else {
+                                state.open_path = Some(vec![i]);
+                                state.bar_active = Some(i);
+                                state.hover_path = vec![Some(i)];
+                            }
+                            shell.capture_event();
+                            shell.request_redraw();
+                            return;
+                        }
+                    }
                 }
-                return;
             }
-            Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) => {}
-            _ => return,
+            _ => {}
         }
 
-        let Some(pos) = cursor.position() else {
-            return;
-        };
-
-        for (i, label) in label_bounds.iter().enumerate() {
-            if label.contains(pos) {
-                if state.open_path == Some(vec![i]) {
-                    // Toggle off.
-                    state.close();
-                    state.bar_active = None;
-                } else {
-                    state.open_path = Some(vec![i]);
-                    state.bar_active = Some(i);
-                    state.hover_path = vec![Some(i)];
-                }
-                shell.capture_event();
-                shell.request_redraw();
-                return;
-            }
+        // Forward events to child triggers for hover styling.
+        for ((i, child_layout), child_tree) in
+            layout.children().enumerate().zip(tree.children.iter_mut())
+        {
+            self.triggers[i].as_widget_mut().update(
+                child_tree,
+                event,
+                child_layout,
+                cursor,
+                renderer,
+                clipboard,
+                shell,
+                viewport,
+            );
         }
     }
 
@@ -469,25 +446,25 @@ where
         tree: &Tree,
         layout: Layout<'_>,
         cursor: mouse::Cursor,
-        _viewport: &Rectangle,
-        _renderer: &Renderer,
+        viewport: &Rectangle,
+        renderer: &Renderer,
     ) -> mouse::Interaction {
-        let state = tree.state.downcast_ref::<State<Renderer::Paragraph>>();
-        let bounds = layout.bounds();
-        let spacing = state.spacing_cache.get();
-        let padding = state.padding_cache.get();
-        let label_bounds = compute_bar_label_bounds(state, bounds, padding, spacing);
-
-        let Some(pos) = cursor.position() else {
-            return mouse::Interaction::None;
-        };
-
-        for label in &label_bounds {
-            if label.contains(pos) {
-                return mouse::Interaction::Pointer;
+        for ((i, child_layout), child_tree) in
+            layout.children().enumerate().zip(tree.children.iter())
+        {
+            let interaction = self.triggers[i].as_widget().mouse_interaction(
+                child_tree,
+                child_layout,
+                cursor,
+                viewport,
+                renderer,
+            );
+            if interaction != mouse::Interaction::default() {
+                return interaction;
             }
         }
-        mouse::Interaction::None
+
+        mouse::Interaction::default()
     }
 
     fn overlay<'b>(
@@ -498,14 +475,17 @@ where
         _viewport: &Rectangle,
         translation: Vector,
     ) -> Option<advanced_overlay::Element<'b, Message, Theme, Renderer>> {
-        let state = tree.state.downcast_mut::<State<Renderer::Paragraph>>();
+        let state = tree.state.downcast_mut::<State>();
         state.open_path.as_ref()?;
 
         let bar_bounds = layout.bounds() + translation;
+        let bar_label_bounds: Vec<Rectangle> = layout
+            .children()
+            .map(|l| l.bounds() + translation)
+            .collect();
+
         let spacing = state.spacing_cache.get();
         let padding = state.padding_cache.get();
-        let bar_label_bounds = compute_bar_label_bounds(state, bar_bounds, padding, spacing);
-
         let text_size = self.text_size.unwrap_or_else(|| renderer.default_size()).0;
         let font = self.font.unwrap_or_else(|| renderer.default_font());
         let metrics = Metrics::new(text_size, padding, spacing);
@@ -518,42 +498,36 @@ where
             metrics,
             font,
             style_fn: &self.class,
+            _renderer: std::marker::PhantomData,
         };
 
         Some(advanced_overlay::Element::new(Box::new(overlay)))
     }
-}
 
-fn compute_bar_label_bounds<P: Paragraph>(
-    state: &State<P>,
-    bar_bounds: Rectangle,
-    padding: Padding,
-    spacing: f32,
-) -> Vec<Rectangle> {
-    let mut out = Vec::with_capacity(state.bar_labels.len());
-    let mut x = bar_bounds.x + padding.left;
-    for (i, slot) in state.bar_labels.iter().enumerate() {
-        let w = slot.paragraph.min_width() + padding.left + padding.right;
-        out.push(Rectangle {
-            x,
-            y: bar_bounds.y,
-            width: w,
-            height: bar_bounds.height,
-        });
-        x += w;
-        if i + 1 < state.bar_labels.len() {
-            x += spacing;
+    fn operate(
+        &mut self,
+        tree: &mut Tree,
+        layout: Layout<'_>,
+        renderer: &Renderer,
+        operation: &mut dyn iced::advanced::widget::Operation,
+    ) {
+        for ((i, child_layout), child_tree) in
+            layout.children().enumerate().zip(tree.children.iter_mut())
+        {
+            self.triggers[i]
+                .as_widget_mut()
+                .operate(child_tree, child_layout, renderer, operation);
         }
     }
-    out
 }
 
 impl<'a, Message, Theme, Renderer> From<MenuBar<'a, Message, Theme, Renderer>>
     for Element<'a, Message, Theme, Renderer>
 where
     Message: Clone + 'a,
-    Theme: Catalog + SpacingBase + 'a,
-    Renderer: text::Renderer<Font = Font> + 'a,
+    Theme:
+        Catalog + button::Catalog + SpacingBase + RoundnessBase + iced::widget::text::Catalog + 'a,
+    Renderer: renderer::Renderer + text::Renderer<Font = Font> + 'a,
 {
     fn from(bar: MenuBar<'a, Message, Theme, Renderer>) -> Self {
         Element::new(bar)

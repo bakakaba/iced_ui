@@ -10,7 +10,7 @@ pub enum Variant {
     /// Filled background with contrasting text. This is the default.
     #[default]
     Solid,
-    /// Border outline with no fill; text uses primary color.
+    /// Border outline with no fill; text uses the button's color token.
     Outline,
     /// Transparent at rest; gains a subtle background on hover.
     Ghost,
@@ -57,6 +57,37 @@ impl ButtonSize {
     }
 }
 
+/// The color token applied to a button's text and hover derivation.
+///
+/// Each variant resolves to a concrete [`Color`] from the active
+/// theme at draw time. The resolved color drives:
+///
+/// - **Solid**: the background fill (text is the readable contrast).
+/// - **Outline**: the text and border color.
+/// - **Ghost**: the text color.
+///
+/// Hover and press overlays are derived from the resolved color.
+#[derive(Debug, Default, Clone, Copy, PartialEq)]
+pub enum ButtonColor {
+    /// Primary color from the theme.
+    #[default]
+    Primary,
+    /// Secondary color from the theme.
+    Secondary,
+    /// Success color from the theme.
+    Success,
+    /// Warning color from the theme.
+    Warning,
+    /// Danger color from the theme.
+    Danger,
+    /// Foreground/text color from the theme.
+    Foreground,
+    /// Informational color from the theme.
+    Information,
+    /// A specific custom color.
+    Custom(Color),
+}
+
 /// The interaction status of a button.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Status {
@@ -66,6 +97,9 @@ pub enum Status {
     Hovered,
     /// Being pressed.
     Pressed,
+    /// Logically focused (e.g. keyboard navigation, active menu
+    /// trigger). Shown when the button is not hovered or pressed.
+    Focused,
     /// Button is disabled.
     Disabled,
 }
@@ -95,8 +129,9 @@ impl Default for Style {
 }
 
 /// A function that returns a [`Style`] for a given theme, variant,
-/// size, and interaction status.
-pub type StyleFn<'a, Theme> = Box<dyn Fn(&Theme, Variant, ButtonSize, Status) -> Style + 'a>;
+/// size, color token, and interaction status.
+pub type StyleFn<'a, Theme> =
+    Box<dyn Fn(&Theme, Variant, ButtonSize, ButtonColor, Status) -> Style + 'a>;
 
 /// Catalog of theme-driven styles for a [`Button`](super::Button).
 pub trait Catalog {
@@ -106,13 +141,14 @@ pub trait Catalog {
     /// Returns the default [`Self::Class`].
     fn default<'a>() -> Self::Class<'a>;
 
-    /// Resolves a [`Style`] for the given class, variant, size, and
-    /// status.
+    /// Resolves a [`Style`] for the given class, variant, size, color
+    /// token, and status.
     fn style(
         &self,
         class: &Self::Class<'_>,
         variant: Variant,
         size: ButtonSize,
+        color: ButtonColor,
         status: Status,
     ) -> Style;
 }
@@ -129,27 +165,51 @@ impl Catalog for Theme {
         class: &Self::Class<'_>,
         variant: Variant,
         size: ButtonSize,
+        color: ButtonColor,
         status: Status,
     ) -> Style {
-        class(self, variant, size, status)
+        class(self, variant, size, color, status)
     }
 }
 
 /// The default button style.
 ///
-/// - **Solid**: primary strong background, on-primary text.
-/// - **Outline**: transparent, 1px primary border, primary text.
-/// - **Ghost**: fully transparent, primary text.
+/// Resolves the [`ButtonColor`] token against the theme to obtain
+/// a concrete color, then applies it according to the [`Variant`]:
+///
+/// - **Solid**: resolved color as background, readable contrast text.
+/// - **Outline**: transparent background, resolved color for text and
+///   border.
+/// - **Ghost**: fully transparent, resolved color for text.
 ///
 /// All variants use the theme's roundness token for border radius.
-pub fn default(theme: &Theme, variant: Variant, _size: ButtonSize, status: Status) -> Style {
+pub fn default(
+    theme: &Theme,
+    variant: Variant,
+    _size: ButtonSize,
+    color: ButtonColor,
+    status: Status,
+) -> Style {
     let palette = theme.extended_palette();
     let radius = theme.radius(Roundness::sx(2.0));
 
+    // Resolve the color token to a concrete color and its readable
+    // contrast (for use as text on a solid background).
+    let (resolved, on_resolved) = match color {
+        ButtonColor::Primary => (palette.primary.base.color, palette.primary.base.text),
+        ButtonColor::Secondary => (palette.secondary.base.color, palette.secondary.base.text),
+        ButtonColor::Success => (palette.success.base.color, palette.success.base.text),
+        ButtonColor::Warning => (palette.warning.base.color, palette.warning.base.text),
+        ButtonColor::Danger => (palette.danger.base.color, palette.danger.base.text),
+        ButtonColor::Foreground => (palette.background.base.text, palette.background.base.color),
+        ButtonColor::Information => (theme.information.base.color, theme.information.base.text),
+        ButtonColor::Custom(c) => (c, palette.background.base.color),
+    };
+
     let base = match variant {
         Variant::Solid => Style {
-            background: Some(Background::Color(palette.primary.strong.color)),
-            text_color: palette.primary.strong.text,
+            background: Some(Background::Color(resolved)),
+            text_color: on_resolved,
             border: Border {
                 radius: radius.into(),
                 ..Border::default()
@@ -158,17 +218,17 @@ pub fn default(theme: &Theme, variant: Variant, _size: ButtonSize, status: Statu
         },
         Variant::Outline => Style {
             background: None,
-            text_color: palette.primary.base.color,
+            text_color: resolved,
             border: Border {
                 radius: radius.into(),
                 width: 1.0,
-                color: palette.primary.base.color,
+                color: resolved,
             },
             shadow: Shadow::default(),
         },
         Variant::Ghost => Style {
             background: None,
-            text_color: palette.primary.base.color,
+            text_color: resolved,
             border: Border {
                 radius: radius.into(),
                 ..Border::default()
@@ -179,14 +239,14 @@ pub fn default(theme: &Theme, variant: Variant, _size: ButtonSize, status: Statu
 
     match status {
         Status::Active => base,
-        Status::Hovered => {
+        Status::Hovered | Status::Focused => {
             let alpha = match variant {
                 Variant::Solid => 0.08,
                 Variant::Outline | Variant::Ghost => 0.15,
             };
             let overlay = Color {
                 a: alpha,
-                ..base.text_color
+                ..resolved
             };
             Style {
                 background: Some(Background::Color(match base.background {
@@ -203,7 +263,7 @@ pub fn default(theme: &Theme, variant: Variant, _size: ButtonSize, status: Statu
             };
             let overlay = Color {
                 a: alpha,
-                ..base.text_color
+                ..resolved
             };
             Style {
                 background: Some(Background::Color(match base.background {

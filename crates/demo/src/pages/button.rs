@@ -1,5 +1,5 @@
 use iced::widget::{column, row, text};
-use iced_ui::button::{Button, ButtonSize, Variant};
+use iced_ui::button::{Button, ButtonColor, ButtonSize, Variant};
 
 use crate::Element;
 use crate::state::ActionLog;
@@ -87,6 +87,65 @@ impl super::PageView for ButtonPage {
         .spacing(8)
         .align_y(iced::Alignment::Center);
 
+        let colors_solid = row![
+            Button::new(text("Primary"))
+                .color(ButtonColor::Primary)
+                .on_press(Msg::Pressed),
+            Button::new(text("Secondary"))
+                .color(ButtonColor::Secondary)
+                .on_press(Msg::Pressed),
+            Button::new(text("Success"))
+                .color(ButtonColor::Success)
+                .on_press(Msg::Pressed),
+            Button::new(text("Warning"))
+                .color(ButtonColor::Warning)
+                .on_press(Msg::Pressed),
+            Button::new(text("Danger"))
+                .color(ButtonColor::Danger)
+                .on_press(Msg::Pressed),
+            Button::new(text("Info"))
+                .color(ButtonColor::Information)
+                .on_press(Msg::Pressed),
+            Button::new(text("Foreground"))
+                .color(ButtonColor::Foreground)
+                .on_press(Msg::Pressed),
+        ]
+        .spacing(8)
+        .align_y(iced::Alignment::Center);
+
+        let colors_ghost = row![
+            Button::new(text("Primary"))
+                .variant(Variant::Ghost)
+                .color(ButtonColor::Primary)
+                .on_press(Msg::Pressed),
+            Button::new(text("Secondary"))
+                .variant(Variant::Ghost)
+                .color(ButtonColor::Secondary)
+                .on_press(Msg::Pressed),
+            Button::new(text("Success"))
+                .variant(Variant::Ghost)
+                .color(ButtonColor::Success)
+                .on_press(Msg::Pressed),
+            Button::new(text("Warning"))
+                .variant(Variant::Ghost)
+                .color(ButtonColor::Warning)
+                .on_press(Msg::Pressed),
+            Button::new(text("Danger"))
+                .variant(Variant::Ghost)
+                .color(ButtonColor::Danger)
+                .on_press(Msg::Pressed),
+            Button::new(text("Info"))
+                .variant(Variant::Ghost)
+                .color(ButtonColor::Information)
+                .on_press(Msg::Pressed),
+            Button::new(text("Foreground"))
+                .variant(Variant::Ghost)
+                .color(ButtonColor::Foreground)
+                .on_press(Msg::Pressed),
+        ]
+        .spacing(8)
+        .align_y(iced::Alignment::Center);
+
         column![
             text("Solid"),
             solid_row,
@@ -96,6 +155,10 @@ impl super::PageView for ButtonPage {
             ghost_row,
             text("Disabled"),
             disabled_row,
+            text("Colors (Solid)"),
+            colors_solid,
+            text("Colors (Ghost)"),
+            colors_ghost,
         ]
         .spacing(12)
         .padding(20)
