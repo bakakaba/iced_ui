@@ -27,6 +27,7 @@ pub mod fab;
 pub mod icon_button;
 pub mod list;
 pub mod menu;
+pub mod native;
 pub mod navigation_bar;
 pub mod navigation_drawer;
 pub mod navigation_rail;
@@ -52,6 +53,7 @@ pub use menu::{
     Catalog, Icon, Item, KeyBinding, Menu, MenuBar, MenuButton, Separator, Style, StyleFn, default,
     shortcuts,
 };
+pub use native::native;
 pub use navigation_bar::NavigationBar;
 pub use navigation_drawer::NavigationDrawer;
 pub use navigation_rail::NavigationRail;

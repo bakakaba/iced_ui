@@ -7,8 +7,15 @@ repository.workspace = true
 description = "A widget library built on top of iced-rs."
 readme = "../../README.md"
 
+[features]
+default = ["svg", "image"]
+svg = ["iced/svg"]
+image = ["iced/image"]
+qr_code = ["iced/qr_code"]
+markdown = ["iced/markdown"]
+
 [dependencies]
-iced = { version = "0.14", features = ["advanced", "image", "svg"] }
-resvg = "0.45"
-usvg = "0.45"
-tiny-skia = "0.11"
+iced = { version = "0.14", features = ["advanced"] }
+resvg = "0.47.0"
+usvg = "0.47.0"
+tiny-skia = "0.12.0"
