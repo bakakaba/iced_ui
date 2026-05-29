@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.1.2](https://github.com/bakakaba/iced_ui/compare/iced_ui-v0.1.1...iced_ui-v0.1.2) (2026-05-29)
+
+
+### Features
+
+* add lucide icons ([f364a70](https://github.com/bakakaba/iced_ui/commit/f364a70777fb8e05dad72031445ec6cfa7aa4fe0))
+* add menu widget ([93c64d1](https://github.com/bakakaba/iced_ui/commit/93c64d1a1148de7a42fa37032544676d1e8a976a))
+* add screen widget ([8d06093](https://github.com/bakakaba/iced_ui/commit/8d06093d5ceca7b3e3e9a28ddf88996d7bf34785))
+
+
+### Bug Fixes
+
+* fix generation of compatability layer ([6e802c7](https://github.com/bakakaba/iced_ui/commit/6e802c7982dc2533957122282b5bd6ca320fa6f8))
+* include generation of compatibility layer for using iced components directly ([71e5cfb](https://github.com/bakakaba/iced_ui/commit/71e5cfbb3c3988607b4c58bbfc27e08a17a0fb77))
+* remove rounded corners from screen ([9c490e0](https://github.com/bakakaba/iced_ui/commit/9c490e0dc1e19bba66f65dd42051b45087b35212))
+* trigger fix ([856527c](https://github.com/bakakaba/iced_ui/commit/856527c08f63706ebe259d639956701914e062ce))
+
 ## [0.1.1](https://github.com/bakakaba/iced_ui/compare/iced_ui-v0.1.0...iced_ui-v0.1.1) (2026-05-18)
 
 
