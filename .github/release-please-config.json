@@ -3,6 +3,7 @@
   "release-type": "rust",
   "bump-minor-pre-major": true,
   "bump-patch-for-minor-pre-major": true,
+  "include-component-in-tag": false,
   "plugins": [
     "cargo-workspace",
     {
@@ -19,14 +20,12 @@
     "crates/demo": {
       "package-name": "demo",
       "component": "demo",
-      "skip-github-release": true,
-      "include-component-in-tag": false
+      "skip-github-release": true
     },
     "crates/iced_ui_tests": {
       "package-name": "iced_ui_tests",
       "component": "iced_ui_tests",
-      "skip-github-release": true,
-      "include-component-in-tag": false
+      "skip-github-release": true
     }
   }
 }
