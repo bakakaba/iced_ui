@@ -80,29 +80,28 @@ enum SpecialKind {
 /// Locate the iced_widget source directory in the cargo registry.
 fn locate_iced_widget_src() -> PathBuf {
     let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
-    let workspace_root = PathBuf::from(&manifest_dir)
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .to_path_buf();
-
-    let lock_path = workspace_root.join("Cargo.lock");
-    let lock_content = fs::read_to_string(&lock_path).expect("Cannot read Cargo.lock");
-
-    // Parse the lock file to find iced_widget version
-    let version = parse_lock_version(&lock_content, "iced_widget")
-        .expect("iced_widget not found in Cargo.lock");
 
     // Look in cargo home registry
     let cargo_home = std::env::var("CARGO_HOME").unwrap_or_else(|_| {
         let home = std::env::var("HOME").expect("HOME not set");
         format!("{home}/.cargo")
     });
-
-    // Find the registry src directory
     let registry_src = PathBuf::from(&cargo_home).join("registry").join("src");
     let index_dir = find_index_dir(&registry_src);
+
+    // Try to get the exact version from Cargo.lock.
+    // We check multiple locations because CARGO_MANIFEST_DIR varies:
+    //   - In workspace builds: `crates/iced_ui/` → lock is at `../../Cargo.lock`
+    //   - In publish verification: `target/package/iced_ui-x.y.z/` → lock may be
+    //     next to manifest or not present at all.
+    let version = try_lock_version(&manifest_dir, "iced_widget");
+
+    // Fallback: if no lock file was found (e.g. during `cargo publish --dry-run`),
+    // scan the registry for the highest iced_widget version present.
+    let version = version.unwrap_or_else(|| {
+        find_latest_version_in_registry(&index_dir, "iced_widget")
+            .expect("No iced_widget-* found in cargo registry")
+    });
 
     let iced_widget_dir = index_dir.join(format!("iced_widget-{version}"));
     assert!(
@@ -112,6 +111,53 @@ fn locate_iced_widget_src() -> PathBuf {
     );
 
     iced_widget_dir.join("src")
+}
+
+/// Try to read the iced_widget version from a Cargo.lock file.
+/// Searches several candidate paths relative to the manifest directory.
+fn try_lock_version(manifest_dir: &str, package: &str) -> Option<String> {
+    let manifest_path = PathBuf::from(manifest_dir);
+
+    // Candidate lock file locations
+    let candidates = [
+        // Workspace build: crates/iced_ui/ → ../../Cargo.lock
+        manifest_path.parent()?.parent()?.join("Cargo.lock"),
+        // Standalone or publish verification: next to Cargo.toml
+        manifest_path.join("Cargo.lock"),
+    ];
+
+    for lock_path in &candidates {
+        if let Ok(content) = fs::read_to_string(lock_path)
+            && let Some(v) = parse_lock_version(&content, package)
+        {
+            return Some(v);
+        }
+    }
+
+    None
+}
+
+/// Scan the registry index directory for the highest version of a crate.
+fn find_latest_version_in_registry(index_dir: &Path, crate_name: &str) -> Option<String> {
+    let prefix = format!("{crate_name}-");
+    let mut best: Option<String> = None;
+
+    if let Ok(entries) = fs::read_dir(index_dir) {
+        for entry in entries.flatten() {
+            let name = entry.file_name();
+            let name_str = name.to_string_lossy();
+            if let Some(version) = name_str.strip_prefix(&prefix)
+                && entry.path().is_dir()
+            {
+                // Pick the highest version lexicographically (works for semver)
+                if best.as_deref().is_none_or(|b| version > b) {
+                    best = Some(version.to_string());
+                }
+            }
+        }
+    }
+
+    best
 }
 
 fn parse_lock_version(content: &str, package_name: &str) -> Option<String> {
