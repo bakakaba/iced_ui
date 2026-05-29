@@ -2,8 +2,6 @@ name: QA
 
 on:
   pull_request:
-  push:
-    branches: [main]
 
 concurrency:
   group: qa-${{ github.workflow }}-${{ github.ref }}
