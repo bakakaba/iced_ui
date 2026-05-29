@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.3](https://github.com/bakakaba/iced_ui/compare/iced_ui-v0.1.2...iced_ui-v0.1.3) (2026-05-29)
+
+
+### Miscellaneous Chores
+
+* **iced_ui:** Synchronize iced_ui workspace versions
+
 ## [0.1.2](https://github.com/bakakaba/iced_ui/compare/iced_ui-v0.1.1...iced_ui-v0.1.2) (2026-05-29)
 
 
