@@ -1,21 +1,22 @@
 //! Small indicator overlaid on a child widget, showing either
 //! a dot (no content) or a count value.
 //!
-//! The badge is positioned at the top-right corner of the child
-//! content. A dot badge is a small filled circle; a count badge is a
-//! pill-shaped container with a numeric label. Values exceeding the
-//! configured maximum are displayed as "999+" (or similar).
+//! The badge is positioned relative to the child content (defaulting
+//! to the top-right corner). A dot badge is a small filled circle; a
+//! count badge is a pill-shaped container with a numeric label. Values
+//! exceeding the configured maximum are displayed as "999+" (or
+//! similar).
 //!
 //! # Example
 //!
 //! ```ignore
-//! use iced_ui::badge::Badge;
+//! use iced_ui::badge::{Badge, Position};
 //!
-//! // Dot badge on an icon
+//! // Dot badge on an icon (default top-right)
 //! let b = Badge::dot(icon_element);
 //!
-//! // Count badge
-//! let b = Badge::count(icon_element, 5);
+//! // Count badge at bottom-right
+//! let b = Badge::count(icon_element, 5).position(Position::BottomRight);
 //! ```
 
 mod style;
@@ -32,6 +33,44 @@ use iced::{Element, Event, Length, Pixels, Point, Rectangle, Size};
 
 use crate::SpacingBase;
 
+/// The anchor position of the badge indicator relative to the child widget.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Position {
+    /// Centered on the top edge.
+    Top,
+    /// Centered on the top-right corner.
+    #[default]
+    TopRight,
+    /// Centered on the right edge.
+    Right,
+    /// Centered on the bottom-right corner.
+    BottomRight,
+    /// Centered on the bottom edge.
+    Bottom,
+    /// Centered on the bottom-left corner.
+    BottomLeft,
+    /// Centered on the left edge.
+    Left,
+    /// Centered on the top-left corner.
+    TopLeft,
+}
+
+impl Position {
+    /// Returns the anchor point (x, y) on the child bounds for this position.
+    fn anchor(self, bounds: &Rectangle) -> Point {
+        match self {
+            Self::Top => Point::new(bounds.x + bounds.width / 2.0, bounds.y),
+            Self::TopRight => Point::new(bounds.x + bounds.width, bounds.y),
+            Self::Right => Point::new(bounds.x + bounds.width, bounds.y + bounds.height / 2.0),
+            Self::BottomRight => Point::new(bounds.x + bounds.width, bounds.y + bounds.height),
+            Self::Bottom => Point::new(bounds.x + bounds.width / 2.0, bounds.y + bounds.height),
+            Self::BottomLeft => Point::new(bounds.x, bounds.y + bounds.height),
+            Self::Left => Point::new(bounds.x, bounds.y + bounds.height / 2.0),
+            Self::TopLeft => Point::new(bounds.x, bounds.y),
+        }
+    }
+}
+
 /// The content shown inside the badge indicator.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Content {
@@ -41,7 +80,7 @@ enum Content {
     Count(u32),
 }
 
-/// A badge overlaid at the top-right corner of a child widget.
+/// A badge overlaid on a child widget.
 pub struct Badge<'a, Message, Theme = crate::Theme, Renderer = iced::Renderer>
 where
     Theme: Catalog,
@@ -49,6 +88,7 @@ where
 {
     content: Element<'a, Message, Theme, Renderer>,
     badge_content: Content,
+    position: Position,
     max: u32,
     class: Theme::Class<'a>,
 }
@@ -63,6 +103,7 @@ where
         Self {
             content: content.into(),
             badge_content: Content::Dot,
+            position: Position::default(),
             max: 999,
             class: Theme::default(),
         }
@@ -73,9 +114,17 @@ where
         Self {
             content: content.into(),
             badge_content: Content::Count(value),
+            position: Position::default(),
             max: 999,
             class: Theme::default(),
         }
+    }
+
+    /// Sets the anchor position of the badge indicator relative to
+    /// the child widget. Defaults to [`Position::TopRight`].
+    pub fn position(mut self, position: Position) -> Self {
+        self.position = position;
+        self
     }
 
     /// Sets the maximum displayed count. Values above this show as
@@ -143,95 +192,103 @@ where
             viewport,
         );
 
-        let badge_style = Catalog::style(theme, &self.class);
-        let bounds = layout.bounds();
+        // Draw the badge indicator in a separate layer so it renders on
+        // top of the child's text.  Within a single layer the renderer
+        // batches quads and text separately (quads first, then text),
+        // which means child text would otherwise paint over the badge
+        // background quad.
+        renderer.with_layer(*viewport, |renderer| {
+            let badge_style = Catalog::style(theme, &self.class);
+            let bounds = layout.bounds();
+            let anchor = self.position.anchor(&bounds);
 
-        match self.badge_content {
-            Content::Dot => {
-                let dot_size = 6.0_f32;
-                let dot_rect = Rectangle {
-                    x: bounds.x + bounds.width - dot_size,
-                    y: bounds.y,
-                    width: dot_size,
-                    height: dot_size,
-                };
+            match self.badge_content {
+                Content::Dot => {
+                    let dot_size = 6.0_f32;
+                    let dot_rect = Rectangle {
+                        x: anchor.x - dot_size / 2.0,
+                        y: anchor.y - dot_size / 2.0,
+                        width: dot_size,
+                        height: dot_size,
+                    };
 
-                renderer.fill_quad(
-                    renderer::Quad {
-                        bounds: dot_rect,
-                        border: iced::Border {
-                            radius: (dot_size / 2.0).into(),
-                            ..iced::Border::default()
+                    renderer.fill_quad(
+                        renderer::Quad {
+                            bounds: dot_rect,
+                            border: iced::Border {
+                                radius: (dot_size / 2.0).into(),
+                                ..iced::Border::default()
+                            },
+                            shadow: iced::Shadow::default(),
+                            ..renderer::Quad::default()
                         },
-                        shadow: iced::Shadow::default(),
-                        ..renderer::Quad::default()
-                    },
-                    iced::Background::Color(badge_style.background),
-                );
-            }
-            Content::Count(value) => {
-                if value == 0 {
-                    return;
+                        iced::Background::Color(badge_style.background),
+                    );
                 }
+                Content::Count(value) => {
+                    if value == 0 {
+                        return;
+                    }
 
-                let label = if value > self.max {
-                    format!("{}+", self.max)
-                } else {
-                    value.to_string()
-                };
+                    let label = if value > self.max {
+                        format!("{}+", self.max)
+                    } else {
+                        value.to_string()
+                    };
 
-                let font_size = 11.0_f32;
-                let h_padding = 4.0_f32;
-                let min_width = 16.0_f32;
-                let height = 16.0_f32;
+                    let font_size = 11.0_f32;
+                    let h_padding = 4.0_f32;
+                    let min_width = 16.0_f32;
+                    let height = 16.0_f32;
 
-                // Measure text width
-                let text_width = label.len() as f32 * font_size * 0.6;
-                let badge_width = (text_width + h_padding * 2.0).max(min_width);
-                let radius = height / 2.0;
+                    // Measure text width
+                    let text_width = label.len() as f32 * font_size * 0.6;
+                    let badge_width = (text_width + h_padding * 2.0).max(min_width);
+                    let radius = height / 2.0;
 
-                let badge_rect = Rectangle {
-                    x: bounds.x + bounds.width - badge_width * 0.6,
-                    y: bounds.y - height * 0.3,
-                    width: badge_width,
-                    height,
-                };
+                    let badge_rect = Rectangle {
+                        x: anchor.x - badge_width / 2.0,
+                        y: anchor.y - height / 2.0,
+                        width: badge_width,
+                        height,
+                    };
 
-                renderer.fill_quad(
-                    renderer::Quad {
-                        bounds: badge_rect,
-                        border: iced::Border {
-                            radius: radius.into(),
-                            ..iced::Border::default()
+                    renderer.fill_quad(
+                        renderer::Quad {
+                            bounds: badge_rect,
+                            border: iced::Border {
+                                radius: radius.into(),
+                                ..iced::Border::default()
+                            },
+                            shadow: iced::Shadow::default(),
+                            ..renderer::Quad::default()
                         },
-                        shadow: iced::Shadow::default(),
-                        ..renderer::Quad::default()
-                    },
-                    iced::Background::Color(badge_style.background),
-                );
+                        iced::Background::Color(badge_style.background),
+                    );
 
-                // Draw the count text centered in the badge.
-                renderer.fill_text(
-                    Text {
-                        content: label,
-                        bounds: Size::new(badge_rect.width, badge_rect.height),
-                        size: Pixels(font_size),
-                        line_height: text::LineHeight::Relative(1.0),
-                        font: renderer.default_font(),
-                        align_x: alignment::Horizontal::Center.into(),
-                        align_y: alignment::Vertical::Center,
-                        shaping: text::Shaping::Basic,
-                        wrapping: text::Wrapping::None,
-                    },
-                    Point::new(
-                        badge_rect.x + badge_rect.width / 2.0,
-                        badge_rect.y + badge_rect.height / 2.0,
-                    ),
-                    badge_style.text_color,
-                    badge_rect,
-                );
+                    // Draw the count text centered in the badge.
+                    renderer.fill_text(
+                        Text {
+                            content: label,
+                            bounds: Size::new(badge_rect.width, badge_rect.height),
+                            size: Pixels(font_size),
+                            line_height: text::LineHeight::Relative(1.0),
+                            font: renderer.default_font(),
+                            align_x: alignment::Horizontal::Center.into(),
+                            align_y: alignment::Vertical::Center,
+                            shaping: text::Shaping::Basic,
+                            wrapping: text::Wrapping::None,
+                        },
+                        Point::new(
+                            badge_rect.x + badge_rect.width / 2.0,
+                            badge_rect.y + badge_rect.height / 2.0,
+                        ),
+                        badge_style.text_color,
+                        badge_rect,
+                    );
+                }
             }
-        }
+        });
     }
 
     fn update(
