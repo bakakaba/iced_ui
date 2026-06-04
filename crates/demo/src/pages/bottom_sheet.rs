@@ -1,6 +1,7 @@
 use iced::widget::{column, text};
 use iced_ui::bottom_sheet::BottomSheet;
 use iced_ui::icon_button::{self, IconButton};
+use iced_ui::text::Text;
 
 use crate::Element;
 use crate::state::ActionLog;
@@ -30,8 +31,9 @@ impl super::PageView for BottomSheetPage {
 
     fn view(&self, _log: &ActionLog) -> Element<'_, Msg> {
         let host_content: Element<'_, Msg> = column![
-            text("Bottom Sheet").size(20),
+            Text::h1("Bottom Sheet"),
             text("A panel sliding from the bottom. Modal or standard.").size(14),
+            Text::h2("Modal"),
             IconButton::new(text("Toggle Sheet").size(14))
                 .variant(icon_button::Variant::Filled)
                 .size(140.0)

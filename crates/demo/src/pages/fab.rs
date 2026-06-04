@@ -1,5 +1,6 @@
 use iced::widget::{column, row, text};
 use iced_ui::fab::{Fab, FabSize};
+use iced_ui::text::Text;
 use lucide_icons::Icon;
 
 use crate::Element;
@@ -44,8 +45,9 @@ impl super::PageView for FabPage {
             .on_press(Msg::Pressed);
 
         column![
-            text("FAB (Floating Action Button)").size(20),
+            Text::h1("FAB (Floating Action Button)"),
             text("Small, Regular, Large, Extended, and Lowered variants.").size(14),
+            Text::h2("Sizes"),
             row![small_fab, regular_fab, large_fab, extended_fab, lowered_fab].spacing(16),
         ]
         .spacing(16)

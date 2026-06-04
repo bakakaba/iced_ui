@@ -1,6 +1,7 @@
 use iced::widget::{column, text};
 use iced_ui::icon_button::{self, IconButton};
 use iced_ui::navigation_drawer::{DrawerItem, NavigationDrawer};
+use iced_ui::text::Text;
 use lucide_icons::Icon;
 
 use crate::Element;
@@ -42,8 +43,9 @@ impl super::PageView for NavigationDrawerPage {
 
     fn view(&self, log: &ActionLog) -> Element<'_, Msg> {
         let host: Element<'_, Msg> = column![
-            text("Navigation Drawer").size(20),
+            Text::h1("Navigation Drawer"),
             text("Side panel with destinations. Modal with scrim.").size(14),
+            Text::h2("Modal"),
             IconButton::new(text("Toggle Drawer").size(14))
                 .variant(icon_button::Variant::Filled)
                 .size(140.0)

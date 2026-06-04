@@ -1,5 +1,6 @@
 use iced::widget::{column, row, text};
 use iced_ui::icon_button::{self, IconButton};
+use iced_ui::text::Text;
 use lucide_icons::Icon;
 
 use crate::Element;
@@ -50,9 +51,10 @@ impl super::PageView for IconButtonPage {
             .on_press(Msg::Toggled);
 
         column![
-            text("IconButton").size(20),
+            Text::h1("IconButton"),
             text("Four variants: Standard, Filled, Filled Tonal, Outlined. Supports toggle.")
                 .size(14),
+            Text::h2("Variants"),
             row![standard, filled, tonal, outlined, toggle].spacing(16),
             text(format!("Toggle state: {}", self.toggled)).size(12),
         ]

@@ -1,6 +1,7 @@
 use iced::Length;
 use iced::widget::{column, row, text};
 use iced_ui::divider::Divider;
+use iced_ui::text::Text;
 
 use crate::Element;
 use crate::state::ActionLog;
@@ -17,16 +18,17 @@ impl super::PageView for DividerPage {
 
     fn view(&self, _log: &ActionLog) -> Element<'_, Msg> {
         column![
-            text("Divider").size(20),
+            Text::h1("Divider"),
             text("Horizontal and vertical separators with optional insets.").size(14),
-            text("Full width:").size(14),
+            Text::h2("Type"),
             Divider::horizontal(),
-            text("With inset:").size(14),
             Divider::horizontal().inset(iced_ui::Space::sx(4.0)),
+            Text::h2("Axis"),
+            Divider::horizontal(),
             row![
-                text("Vertical:").size(14),
+                text("Left").size(14),
                 Divider::vertical(),
-                text("Between content").size(14),
+                text("Right").size(14),
             ]
             .spacing(8)
             .height(Length::Fixed(40.0)),

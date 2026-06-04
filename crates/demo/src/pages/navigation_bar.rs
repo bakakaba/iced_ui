@@ -1,5 +1,6 @@
 use iced::widget::{column, text};
 use iced_ui::navigation_bar::{self, NavigationBar};
+use iced_ui::text::Text;
 use lucide_icons::Icon;
 
 use crate::Element;
@@ -26,8 +27,9 @@ impl super::PageView for NavigationBarPage {
             .active(0);
 
         column![
-            text("Navigation Bar").size(20),
+            Text::h1("Navigation Bar"),
             text("Bottom bar with 3-5 icon+label destinations.").size(14),
+            Text::h2("Default"),
             bar,
         ]
         .spacing(16)

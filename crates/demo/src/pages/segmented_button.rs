@@ -1,5 +1,6 @@
 use iced::widget::{column, text};
 use iced_ui::segmented_button::{Segment, SegmentedButton};
+use iced_ui::text::Text;
 
 use crate::Element;
 use crate::state::ActionLog;
@@ -33,8 +34,9 @@ impl super::PageView for SegmentedButtonPage {
             .on_press(Msg::Selected);
 
         column![
-            text("Segmented Button").size(20),
+            Text::h1("Segmented Button"),
             text("Single-select toggle group with shared border.").size(14),
+            Text::h2("Default"),
             segmented,
             text(format!("Selected: {}", self.selected)).size(12),
         ]

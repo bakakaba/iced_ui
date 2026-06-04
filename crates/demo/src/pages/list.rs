@@ -1,6 +1,7 @@
 use iced::Length;
 use iced::widget::{column, text};
 use iced_ui::list;
+use iced_ui::text::Text;
 
 use crate::Element;
 use crate::state::ActionLog;
@@ -25,8 +26,9 @@ impl super::PageView for ListPage {
             .width(Length::Fixed(200.0));
 
         column![
-            text("List").size(20),
+            Text::h1("List"),
             text("A vertical list of interactive items with hover/press feedback.").size(14),
+            Text::h2("Default"),
             example_list,
         ]
         .spacing(16)

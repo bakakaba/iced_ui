@@ -1,6 +1,7 @@
 use iced::widget::{column, row, text};
 use iced_ui::button::{Button, Variant};
 use iced_ui::menu::{Entry, Item, Menu, MenuBar, MenuButton, Separator};
+use iced_ui::text::Text;
 
 use crate::Element;
 use crate::state::ActionLog;
@@ -62,9 +63,11 @@ impl super::PageView for MenuPage {
         );
 
         column![
-            text("MenuBar"),
+            Text::h1("Menu"),
+            text("Dropdown menus attached to a menu bar or standalone button.").size(14),
+            Text::h2("MenuBar"),
             menu_bar,
-            text("MenuButton (standalone)"),
+            Text::h2("MenuButton (standalone)"),
             row![menu_button].spacing(8),
         ]
         .spacing(12)

@@ -5,6 +5,7 @@ use iced_ui::divider::Divider;
 use iced_ui::fab::Fab;
 use iced_ui::list;
 use iced_ui::screen::Screen;
+use iced_ui::text::Text;
 use iced_ui::top_app_bar::TopAppBar;
 use lucide_icons::Icon;
 
@@ -56,8 +57,9 @@ impl super::PageView for OverviewPage {
         );
 
         column![
-            text("Overview").size(20),
+            Text::h1("Overview"),
             text("A composed layout demonstrating how iced_ui widgets work together.").size(14),
+            Text::h2("Composed Layout"),
             screen,
         ]
         .spacing(16)

@@ -3,6 +3,7 @@ use iced::advanced::svg as advanced_svg;
 use iced::widget::{Space, column, row, text};
 use iced::{Color, Length};
 use iced_ui::card::Card;
+use iced_ui::text::Text;
 
 use crate::Element;
 use crate::state::ActionLog;
@@ -67,10 +68,12 @@ impl super::PageView for CardPage {
         .background_svg(gradient_svg_handle());
 
         column![
-            text("Card").size(20),
-            row![flat_card, elevated_card, raster_card, svg_card]
-                .spacing(16)
-                .wrap(),
+            Text::h1("Card"),
+            text("Contained surface for grouping related content.").size(14),
+            Text::h2("Variants"),
+            row![flat_card, elevated_card].spacing(16).wrap(),
+            Text::h2("Backgrounds"),
+            row![raster_card, svg_card].spacing(16).wrap(),
         ]
         .spacing(16)
         .padding(20)

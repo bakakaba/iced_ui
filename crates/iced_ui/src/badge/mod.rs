@@ -69,6 +69,23 @@ impl Position {
             Self::TopLeft => Point::new(bounds.x, bounds.y),
         }
     }
+
+    /// Returns the outward offset direction for this position.
+    ///
+    /// Each component is −1, 0, or 1 indicating the direction away from
+    /// the child content center.
+    fn offset_direction(self) -> (f32, f32) {
+        match self {
+            Self::Top => (0.0, -1.0),
+            Self::TopRight => (1.0, -1.0),
+            Self::Right => (1.0, 0.0),
+            Self::BottomRight => (1.0, 1.0),
+            Self::Bottom => (0.0, 1.0),
+            Self::BottomLeft => (-1.0, 1.0),
+            Self::Left => (-1.0, 0.0),
+            Self::TopLeft => (-1.0, -1.0),
+        }
+    }
 }
 
 /// The content shown inside the badge indicator.
@@ -201,13 +218,18 @@ where
             let badge_style = Catalog::style(theme, &self.class);
             let bounds = layout.bounds();
             let anchor = self.position.anchor(&bounds);
+            let (dx, dy) = self.position.offset_direction();
+            // Material Design offset: push the badge center slightly
+            // outward from the child bounds so it doesn't obscure content.
+            let offset = 2.0_f32;
+            let center = Point::new(anchor.x + dx * offset, anchor.y + dy * offset);
 
             match self.badge_content {
                 Content::Dot => {
                     let dot_size = 6.0_f32;
                     let dot_rect = Rectangle {
-                        x: anchor.x - dot_size / 2.0,
-                        y: anchor.y - dot_size / 2.0,
+                        x: center.x - dot_size / 2.0,
+                        y: center.y - dot_size / 2.0,
                         width: dot_size,
                         height: dot_size,
                     };
@@ -247,8 +269,8 @@ where
                     let radius = height / 2.0;
 
                     let badge_rect = Rectangle {
-                        x: anchor.x - badge_width / 2.0,
-                        y: anchor.y - height / 2.0,
+                        x: center.x - badge_width / 2.0,
+                        y: center.y - height / 2.0,
                         width: badge_width,
                         height,
                     };

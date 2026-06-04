@@ -1,6 +1,7 @@
 use iced::widget::{column, text};
 use iced_ui::icon_button::{self, IconButton};
 use iced_ui::snackbar::Snackbar;
+use iced_ui::text::Text;
 
 use crate::Element;
 use crate::state::ActionLog;
@@ -30,8 +31,9 @@ impl super::PageView for SnackbarPage {
 
     fn view(&self, _log: &ActionLog) -> Element<'_, Msg> {
         let host_content: Element<'_, Msg> = column![
-            text("Snackbar").size(20),
+            Text::h1("Snackbar"),
             text("Temporary notification bar at the bottom of the host.").size(14),
+            Text::h2("Default"),
             IconButton::new(text("Show Snackbar").size(14))
                 .variant(icon_button::Variant::Filled)
                 .size(140.0)

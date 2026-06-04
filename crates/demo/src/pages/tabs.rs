@@ -1,5 +1,6 @@
 use iced::widget::{column, text};
 use iced_ui::tabs::{Tab, Tabs};
+use iced_ui::text::Text;
 use lucide_icons::Icon;
 
 use crate::Element;
@@ -35,8 +36,9 @@ impl super::PageView for TabsPage {
             .active(self.active);
 
         column![
-            text("Tabs").size(20),
+            Text::h1("Tabs"),
             text("Horizontal tab row with active indicator.").size(14),
+            Text::h2("Default"),
             tabs,
             text(format!("Active tab: {}", self.active)).size(12),
         ]

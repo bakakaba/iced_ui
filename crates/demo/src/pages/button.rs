@@ -1,5 +1,6 @@
 use iced::widget::{column, row, text};
 use iced_ui::button::{Button, ButtonColor, ButtonSize, Variant};
+use iced_ui::text::Text;
 
 use crate::Element;
 use crate::state::ActionLog;
@@ -23,49 +24,13 @@ impl super::PageView for ButtonPage {
     }
 
     fn view(&self, _log: &ActionLog) -> Element<'_, Msg> {
-        let solid_row = row![
-            Button::new(text("SM"))
-                .size(ButtonSize::Sm)
-                .on_press(Msg::Pressed),
-            Button::new(text("MD"))
-                .size(ButtonSize::Md)
-                .on_press(Msg::Pressed),
-            Button::new(text("LG"))
-                .size(ButtonSize::Lg)
-                .on_press(Msg::Pressed),
-        ]
-        .spacing(8)
-        .align_y(iced::Alignment::Center);
-
-        let outline_row = row![
-            Button::new(text("SM"))
+        let variants_row = row![
+            Button::new(text("Solid")).on_press(Msg::Pressed),
+            Button::new(text("Outline"))
                 .variant(Variant::Outline)
-                .size(ButtonSize::Sm)
                 .on_press(Msg::Pressed),
-            Button::new(text("MD"))
-                .variant(Variant::Outline)
-                .size(ButtonSize::Md)
-                .on_press(Msg::Pressed),
-            Button::new(text("LG"))
-                .variant(Variant::Outline)
-                .size(ButtonSize::Lg)
-                .on_press(Msg::Pressed),
-        ]
-        .spacing(8)
-        .align_y(iced::Alignment::Center);
-
-        let ghost_row = row![
-            Button::new(text("SM"))
+            Button::new(text("Ghost"))
                 .variant(Variant::Ghost)
-                .size(ButtonSize::Sm)
-                .on_press(Msg::Pressed),
-            Button::new(text("MD"))
-                .variant(Variant::Ghost)
-                .size(ButtonSize::Md)
-                .on_press(Msg::Pressed),
-            Button::new(text("LG"))
-                .variant(Variant::Ghost)
-                .size(ButtonSize::Lg)
                 .on_press(Msg::Pressed),
         ]
         .spacing(8)
@@ -82,6 +47,20 @@ impl super::PageView for ButtonPage {
             Button::new(text("Ghost"))
                 .variant(Variant::Ghost)
                 .enabled(false)
+                .on_press(Msg::Pressed),
+        ]
+        .spacing(8)
+        .align_y(iced::Alignment::Center);
+
+        let sizes_row = row![
+            Button::new(text("SM"))
+                .size(ButtonSize::Sm)
+                .on_press(Msg::Pressed),
+            Button::new(text("MD"))
+                .size(ButtonSize::Md)
+                .on_press(Msg::Pressed),
+            Button::new(text("LG"))
+                .size(ButtonSize::Lg)
                 .on_press(Msg::Pressed),
         ]
         .spacing(8)
@@ -147,17 +126,18 @@ impl super::PageView for ButtonPage {
         .align_y(iced::Alignment::Center);
 
         column![
-            text("Solid"),
-            solid_row,
-            text("Outline"),
-            outline_row,
-            text("Ghost"),
-            ghost_row,
-            text("Disabled"),
+            Text::h1("Button"),
+            text("Solid, Outline, and Ghost variants with multiple sizes and colors.").size(14),
+            Text::h2("Variants"),
+            variants_row,
+            Text::h3("Disabled"),
             disabled_row,
-            text("Colors (Solid)"),
+            Text::h2("Sizes"),
+            sizes_row,
+            Text::h2("Colors"),
+            Text::h3("Solid"),
             colors_solid,
-            text("Colors (Ghost)"),
+            Text::h3("Ghost"),
             colors_ghost,
         ]
         .spacing(12)

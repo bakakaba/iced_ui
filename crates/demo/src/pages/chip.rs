@@ -1,5 +1,6 @@
 use iced::widget::{column, row, text};
 use iced_ui::chip::Chip;
+use iced_ui::text::Text;
 
 use crate::Element;
 use crate::state::ActionLog;
@@ -41,8 +42,9 @@ impl super::PageView for ChipPage {
         let suggestion = Chip::suggestion(text("Quick reply").size(14)).on_press(Msg::Noop);
 
         column![
-            text("Chip").size(20),
+            Text::h1("Chip"),
             text("Assist, Filter, Input, Suggestion variants.").size(14),
+            Text::h2("Variants"),
             row![assist, filter, input, suggestion].spacing(12),
             text(format!("Filter chip selected: {}", self.selected)).size(12),
         ]

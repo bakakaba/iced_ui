@@ -1,5 +1,5 @@
-use iced::widget::column;
-use iced_ui::text::Text as UiText;
+use iced::widget::{column, text};
+use iced_ui::text::Text;
 
 use crate::Element;
 use crate::state::ActionLog;
@@ -16,11 +16,14 @@ impl super::PageView for TextPage {
 
     fn view(&self, _log: &ActionLog) -> Element<'_, Msg> {
         column![
-            UiText::h1("Heading 1"),
-            UiText::h2("Heading 2"),
-            UiText::h3("Heading 3"),
-            UiText::h4("Heading 4"),
-            UiText::h5("Heading 5"),
+            Text::h1("Text"),
+            text("Semantic heading levels with bold weight and scaled sizes.").size(14),
+            Text::h2("Heading Levels"),
+            Text::h1("Heading 1"),
+            Text::h2("Heading 2"),
+            Text::h3("Heading 3"),
+            Text::h4("Heading 4"),
+            Text::h5("Heading 5"),
         ]
         .spacing(16)
         .padding(20)

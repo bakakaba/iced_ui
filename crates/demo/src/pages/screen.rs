@@ -1,5 +1,6 @@
 use iced::widget::{column, row, text};
 use iced_ui::screen::{Mode, Screen};
+use iced_ui::text::Text;
 
 use crate::Element;
 use crate::state::ActionLog;
@@ -36,11 +37,11 @@ impl super::PageView for ScreenPage {
         .mode(Mode::MobilePortrait);
 
         column![
-            text("Screen").size(20),
+            Text::h1("Screen"),
             text("Aspect-ratio container simulating device viewports.").size(14),
-            text("Desktop (16:9)").size(14),
+            Text::h2("Desktop (16:9)"),
             desktop,
-            text("Mobile").size(14),
+            Text::h2("Mobile"),
             row![mobile_landscape, mobile_portrait].spacing(16),
         ]
         .spacing(16)

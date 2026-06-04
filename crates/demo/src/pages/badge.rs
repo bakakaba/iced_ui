@@ -1,5 +1,6 @@
-use iced::widget::{column, container, row, text};
+use iced::widget::{column, row, text};
 use iced_ui::badge::{Badge, Position};
+use iced_ui::text::Text;
 
 use crate::Element;
 use crate::state::ActionLog;
@@ -20,28 +21,27 @@ impl super::PageView for BadgePage {
         let large_count = Badge::count(text("Notifications").size(16), 1234).max(999);
 
         let position_item = |label: &'static str, pos: Position| -> Element<'_, Msg> {
-            Badge::dot(container(text(label).size(12)).center_x(32).center_y(32))
-                .position(pos)
-                .into()
+            Badge::dot(text(label).size(14)).position(pos).into()
         };
 
         let positions_row = row![
-            position_item("TL", Position::TopLeft),
-            position_item("T", Position::Top),
-            position_item("TR", Position::TopRight),
-            position_item("R", Position::Right),
-            position_item("BR", Position::BottomRight),
-            position_item("B", Position::Bottom),
-            position_item("BL", Position::BottomLeft),
-            position_item("L", Position::Left),
+            position_item("Top Left", Position::TopLeft),
+            position_item("Top", Position::Top),
+            position_item("Top Right", Position::TopRight),
+            position_item("Right", Position::Right),
+            position_item("Bottom Right", Position::BottomRight),
+            position_item("Bottom", Position::Bottom),
+            position_item("Bottom Left", Position::BottomLeft),
+            position_item("Left", Position::Left),
         ]
         .spacing(24);
 
         column![
-            text("Badge").size(20),
+            Text::h1("Badge"),
             text("Small dot or count indicator overlaid on content.").size(14),
+            Text::h2("Variants"),
             row![dot_badge, count_badge, large_count].spacing(32),
-            text("Positions").size(16),
+            Text::h2("Positions"),
             positions_row,
         ]
         .spacing(16)

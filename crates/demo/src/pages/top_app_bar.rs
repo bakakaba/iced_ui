@@ -1,4 +1,5 @@
 use iced::widget::{column, text};
+use iced_ui::text::Text;
 use iced_ui::top_app_bar::TopAppBar;
 use lucide_icons::Icon;
 
@@ -27,8 +28,9 @@ impl super::PageView for TopAppBarPage {
             .action(action2);
 
         column![
-            text("Top App Bar").size(20),
+            Text::h1("Top App Bar"),
             text("Title bar with navigation icon, title, and action icons.").size(14),
+            Text::h2("Default"),
             app_bar,
         ]
         .spacing(16)

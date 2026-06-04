@@ -1,6 +1,7 @@
 use iced::Length;
 use iced::widget::{column, container, text};
 use iced_ui::navigation_rail::{self, NavigationRail};
+use iced_ui::text::Text;
 use lucide_icons::Icon;
 
 use crate::Element;
@@ -28,8 +29,9 @@ impl super::PageView for NavigationRailPage {
             .active(0);
 
         column![
-            text("Navigation Rail").size(20),
+            Text::h1("Navigation Rail"),
             text("Vertical icon+label destinations for desktop/tablet.").size(14),
+            Text::h2("Default"),
             container(rail).height(Length::Fixed(300.0)),
         ]
         .spacing(16)
