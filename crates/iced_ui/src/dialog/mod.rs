@@ -31,7 +31,7 @@ use iced::advanced::{Clipboard, Shell};
 use iced::mouse;
 use iced::{Border, Element, Event, Length, Pixels, Point, Rectangle, Size, Vector};
 
-use crate::{RoundnessBase, SpacingBase};
+use crate::{FontSizeBase, RoundnessBase, SpacingBase};
 
 /// Maximum width of the dialog container.
 const MAX_WIDTH: f32 = 560.0;
@@ -132,7 +132,7 @@ impl<'a, Message, Theme, Renderer> Widget<Message, Theme, Renderer>
     for Dialog<'a, Message, Theme, Renderer>
 where
     Message: Clone + 'a,
-    Theme: Catalog + SpacingBase + RoundnessBase + 'a,
+    Theme: Catalog + SpacingBase + RoundnessBase + FontSizeBase + 'a,
     Renderer: renderer::Renderer + text::Renderer + 'a,
 {
     fn tag(&self) -> tree::Tag {
@@ -298,7 +298,7 @@ impl<Message, Theme, Renderer> overlay::Overlay<Message, Theme, Renderer>
     for DialogOverlay<'_, '_, Message, Theme, Renderer>
 where
     Message: Clone,
-    Theme: Catalog + SpacingBase + RoundnessBase,
+    Theme: Catalog + SpacingBase + RoundnessBase + FontSizeBase,
     Renderer: renderer::Renderer + text::Renderer,
 {
     fn layout(&mut self, _renderer: &Renderer, _bounds: Size) -> layout::Node {
@@ -375,7 +375,7 @@ where
                 Text {
                     content: title.to_string(),
                     bounds: Size::new(dialog_bounds.width - padding * 2.0, 28.0),
-                    size: Pixels(22.0),
+                    size: Pixels(theme.text_size() * 1.375),
                     line_height: text::LineHeight::Relative(1.2),
                     font: renderer.default_font(),
                     align_x: iced::alignment::Horizontal::Left.into(),
@@ -396,7 +396,7 @@ where
                 Text {
                     content: body.to_string(),
                     bounds: Size::new(dialog_bounds.width - padding * 2.0, 200.0),
-                    size: Pixels(14.0),
+                    size: Pixels(theme.text_size() * 0.875),
                     line_height: text::LineHeight::Relative(1.4),
                     font: renderer.default_font(),
                     align_x: iced::alignment::Horizontal::Left.into(),
@@ -451,7 +451,7 @@ where
                     Text {
                         content: label.clone(),
                         bounds: Size::new(btn_width, 40.0),
-                        size: Pixels(14.0),
+                        size: Pixels(theme.text_size() * 0.875),
                         line_height: text::LineHeight::Relative(1.0),
                         font: renderer.default_font(),
                         align_x: iced::alignment::Horizontal::Center.into(),
@@ -480,7 +480,7 @@ where
                     Text {
                         content: label.clone(),
                         bounds: Size::new(btn_width, 40.0),
-                        size: Pixels(14.0),
+                        size: Pixels(theme.text_size() * 0.875),
                         line_height: text::LineHeight::Relative(1.0),
                         font: renderer.default_font(),
                         align_x: iced::alignment::Horizontal::Center.into(),
@@ -609,7 +609,7 @@ impl<'a, Message, Theme, Renderer> From<Dialog<'a, Message, Theme, Renderer>>
     for Element<'a, Message, Theme, Renderer>
 where
     Message: Clone + 'a,
-    Theme: Catalog + SpacingBase + RoundnessBase + 'a,
+    Theme: Catalog + SpacingBase + RoundnessBase + FontSizeBase + 'a,
     Renderer: renderer::Renderer + text::Renderer + 'a,
 {
     fn from(dialog: Dialog<'a, Message, Theme, Renderer>) -> Self {

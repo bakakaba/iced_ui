@@ -2,8 +2,9 @@
 //!
 //! [`Theme`] is the default `Theme` parameter for every widget in this
 //! crate. It composes a built-in [`iced::Theme`] (the colors source)
-//! with a global `spacing` and `roundness`, all of which can
-//! be tweaked at runtime to restyle every `iced_ui` widget at once.
+//! with a global `spacing`, `roundness`, and `text_size`, all of
+//! which can be tweaked at runtime to restyle every `iced_ui` widget
+//! at once.
 //!
 //! # Token model
 //!
@@ -14,6 +15,12 @@
 //! Bumping `spacing` or `roundness` rescales every factor
 //! across the UI without touching call sites — the basis for density
 //! themes.
+//!
+//! Text sizes are absolute pixel values. Components call
+//! `theme.text(factor)` where `factor` is a multiplier of the base
+//! text size, and receive an `iced::Pixels` value. For example,
+//! `theme.text(0.875)` at the default 16px base returns
+//! `Pixels(14.0)`.
 //!
 //! ```
 //! use iced_ui::{Space, Theme};
@@ -34,7 +41,9 @@ mod iced_compat;
 pub mod scale;
 pub mod tokens;
 
-pub use scale::{FontSize, PaddingSource, Roundness, RoundnessBase, Space, SpacingBase};
+pub use scale::{
+    FontSize, FontSizeBase, PaddingSource, Roundness, RoundnessBase, Space, SpacingBase,
+};
 pub use tokens::{Information, Paper};
 
 use iced::theme::palette;
@@ -45,12 +54,13 @@ use iced::theme::palette;
 /// theme-aware color (palette, extended palette). `spacing` is the
 /// integer step size for spacing tokens; every [`Space::sx(f)`] resolves
 /// to `f * spacing`. `roundness` plays the same role for
-/// [`Roundness::sx(f)`].
+/// [`Roundness::sx(f)`]. `text_size` is the base text size in logical
+/// pixels from which all widget font sizes are derived.
 ///
-/// All three fields are public so application code can tweak them
+/// All fields are public so application code can tweak them
 /// directly. Construct one with [`Theme::default`] (Dark colors,
-/// `spacing = 4`, `roundness = 4`) or by setting fields
-/// explicitly.
+/// `spacing = 4`, `roundness = 4`, `text_size = 16.0`) or by
+/// setting fields explicitly.
 ///
 /// [`Space::sx(f)`]: scale::Space::sx
 /// [`Roundness::sx(f)`]: scale::Roundness::sx
@@ -68,6 +78,11 @@ pub struct Theme {
     /// [`Roundness::sx(f)`](scale::Roundness::sx) — `sx(2.0)` resolves
     /// to `2.0 * roundness`.
     pub roundness: u8,
+    /// Base text size in logical pixels. All widget font sizes are
+    /// derived as fractions or multiples of this value via
+    /// [`Theme::text(factor)`](Self::text). Defaults to iced's
+    /// built-in default text size (16.0).
+    pub text_size: f32,
     /// Surface colors that contrast the background. Used for cards,
     /// sheets, and other surfaces that float above the base
     /// background.
@@ -83,6 +98,10 @@ impl Theme {
 
     /// The default base unit for roundness tokens.
     pub const DEFAULT_ROUNDNESS: u8 = 4;
+
+    /// The default base text size — matches iced's built-in
+    /// [`Settings::default_text_size`](iced::Settings::default_text_size).
+    pub const DEFAULT_TEXT_SIZE: f32 = 16.0;
 
     /// Returns the [`iced::theme::Palette`] of the underlying
     /// [`iced::Theme`].
@@ -113,6 +132,26 @@ impl Theme {
     /// [`spacing`](Self::spacing).
     pub fn padding(&self, padding: scale::PaddingSource) -> iced::Padding {
         padding.resolve(self.spacing)
+    }
+
+    /// Returns a text size as a multiple of this theme's
+    /// [`text_size`](Self::text_size).
+    ///
+    /// `factor` is a multiplier: `1.0` returns the base text size,
+    /// `0.875` returns 87.5% of it (14px at default), `1.375` returns
+    /// 137.5% (22px at default), and so on.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use iced_ui::Theme;
+    ///
+    /// let theme = Theme::default();
+    /// assert_eq!(theme.text(1.0).0, 16.0);
+    /// assert_eq!(theme.text(0.875).0, 14.0);
+    /// ```
+    pub fn text(&self, factor: f32) -> iced::Pixels {
+        iced::Pixels(self.text_size * factor)
     }
 
     /// Regenerates [`paper`](Self::paper) from the current
@@ -146,6 +185,7 @@ impl From<iced::Theme> for Theme {
             colors,
             spacing: Self::DEFAULT_SPACING,
             roundness: Self::DEFAULT_ROUNDNESS,
+            text_size: Self::DEFAULT_TEXT_SIZE,
         }
     }
 }
@@ -159,5 +199,11 @@ impl scale::SpacingBase for Theme {
 impl scale::RoundnessBase for Theme {
     fn roundness(&self) -> u8 {
         self.roundness
+    }
+}
+
+impl scale::FontSizeBase for Theme {
+    fn text_size(&self) -> f32 {
+        self.text_size
     }
 }

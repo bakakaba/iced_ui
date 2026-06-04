@@ -37,7 +37,7 @@ use super::item::{Entry, Menu};
 use super::overlay::{Metrics, draw_menu, hit_row, layout_menu};
 use super::style::{Catalog, Style};
 
-use crate::SpacingBase;
+use crate::{FontSizeBase, SpacingBase};
 
 /// Internal widget state.
 #[derive(Debug, Default)]
@@ -120,7 +120,7 @@ impl<'a, Message, Theme, Renderer> Widget<Message, Theme, Renderer>
     for MenuButton<'a, Message, Theme, Renderer>
 where
     Message: Clone + 'a,
-    Theme: Catalog + SpacingBase + 'a,
+    Theme: Catalog + SpacingBase + FontSizeBase + 'a,
     Renderer: text::Renderer<Font = Font> + 'a,
 {
     fn tag(&self) -> tree::Tag {
@@ -287,7 +287,7 @@ impl<'a, Message, Theme, Renderer> From<MenuButton<'a, Message, Theme, Renderer>
     for Element<'a, Message, Theme, Renderer>
 where
     Message: Clone + 'a,
-    Theme: Catalog + SpacingBase + 'a,
+    Theme: Catalog + SpacingBase + FontSizeBase + 'a,
     Renderer: text::Renderer<Font = Font> + 'a,
 {
     fn from(menu_button: MenuButton<'a, Message, Theme, Renderer>) -> Self {

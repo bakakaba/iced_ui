@@ -23,7 +23,9 @@ use iced::advanced::{Clipboard, Shell};
 use iced::mouse;
 use std::marker::PhantomData;
 
-use iced::{Background, Color, Element, Event, Length, Rectangle, Size};
+use iced::{Background, Color, Element, Event, Length, Pixels, Rectangle, Size};
+
+use crate::FontSizeBase;
 
 /// Height of a tab cell in logical pixels (label-only).
 const TAB_HEIGHT: f32 = 48.0;
@@ -155,7 +157,7 @@ impl<'a, Message, Theme, Renderer> Widget<Message, Theme, Renderer>
     for Tabs<'a, Message, Theme, Renderer>
 where
     Message: Clone + 'a,
-    Theme: Catalog + 'a,
+    Theme: Catalog + FontSizeBase + 'a,
     Renderer: renderer::Renderer + iced::advanced::text::Renderer + 'a,
 {
     fn tag(&self) -> tree::Tag {
@@ -338,7 +340,7 @@ where
             let text = iced::advanced::text::Text {
                 content: tab.label.clone(),
                 bounds: Size::new(cell_bounds.width, text_bounds_height),
-                size: renderer.default_size(),
+                size: Pixels(theme.text_size()),
                 line_height: iced::advanced::text::LineHeight::default(),
                 font: renderer.default_font(),
                 align_x: iced::alignment::Horizontal::Center.into(),
@@ -439,7 +441,7 @@ impl<'a, Message, Theme, Renderer> From<Tabs<'a, Message, Theme, Renderer>>
     for Element<'a, Message, Theme, Renderer>
 where
     Message: Clone + 'a,
-    Theme: Catalog + 'a,
+    Theme: Catalog + FontSizeBase + 'a,
     Renderer: renderer::Renderer + iced::advanced::text::Renderer + 'a,
 {
     fn from(tabs: Tabs<'a, Message, Theme, Renderer>) -> Self {

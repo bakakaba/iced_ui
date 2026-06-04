@@ -47,12 +47,14 @@ impl ButtonSize {
         }
     }
 
-    /// Returns the font size in logical pixels.
-    pub fn font_size(self) -> f32 {
+    /// Returns the font size as a fraction of the given base text size.
+    ///
+    /// Pass the theme's base text size (e.g. `theme.text_size()`).
+    pub fn font_size(self, base: f32) -> f32 {
         match self {
-            Self::Sm => 12.0,
-            Self::Md => 13.0,
-            Self::Lg => 14.0,
+            Self::Sm => base * 0.75,
+            Self::Md => base * 0.8125,
+            Self::Lg => base * 0.875,
         }
     }
 }

@@ -63,7 +63,7 @@ pub use snackbar::Snackbar;
 pub use tabs::Tabs;
 pub use text::Text;
 pub use theme::{
-    FontSize, Information, PaddingSource, Paper, Roundness, RoundnessBase, Space, SpacingBase,
-    Theme,
+    FontSize, FontSizeBase, Information, PaddingSource, Paper, Roundness, RoundnessBase, Space,
+    SpacingBase, Theme,
 };
 pub use top_app_bar::TopAppBar;

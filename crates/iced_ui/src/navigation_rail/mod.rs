@@ -23,7 +23,9 @@ use iced::advanced::{Clipboard, Shell};
 use iced::mouse;
 use std::marker::PhantomData;
 
-use iced::{Background, Color, Element, Event, Length, Rectangle, Size};
+use iced::{Background, Color, Element, Event, Length, Pixels, Rectangle, Size};
+
+use crate::FontSizeBase;
 
 /// Width of the rail in logical pixels (MD3 spec).
 const RAIL_WIDTH: f32 = 80.0;
@@ -136,7 +138,7 @@ impl<'a, Message, Theme, Renderer> Widget<Message, Theme, Renderer>
     for NavigationRail<'a, Message, Theme, Renderer>
 where
     Message: Clone + 'a,
-    Theme: Catalog + 'a,
+    Theme: Catalog + FontSizeBase + 'a,
     Renderer: renderer::Renderer + iced::advanced::text::Renderer + 'a,
 {
     fn tag(&self) -> tree::Tag {
@@ -346,7 +348,7 @@ where
             let text = iced::advanced::text::Text {
                 content: dest.label.clone(),
                 bounds: Size::new(cell_bounds.width, label_height),
-                size: renderer.default_size() * 0.85,
+                size: Pixels(theme.text_size() * 0.85),
                 line_height: iced::advanced::text::LineHeight::default(),
                 font: renderer.default_font(),
                 align_x: iced::alignment::Horizontal::Center.into(),
@@ -432,7 +434,7 @@ impl<'a, Message, Theme, Renderer> From<NavigationRail<'a, Message, Theme, Rende
     for Element<'a, Message, Theme, Renderer>
 where
     Message: Clone + 'a,
-    Theme: Catalog + 'a,
+    Theme: Catalog + FontSizeBase + 'a,
     Renderer: renderer::Renderer + iced::advanced::text::Renderer + 'a,
 {
     fn from(rail: NavigationRail<'a, Message, Theme, Renderer>) -> Self {

@@ -26,6 +26,8 @@ use iced::alignment;
 use iced::mouse;
 use iced::{Color, Element, Length, Pixels, Rectangle, Size};
 
+use crate::FontSizeBase;
+
 /// The heading level, determining font size relative to the default.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum Level {
@@ -120,9 +122,13 @@ where
         self
     }
 
-    /// Returns the resolved font size in pixels for the given renderer.
-    fn font_size<Renderer: text::Renderer>(&self, renderer: &Renderer) -> f32 {
-        renderer.default_size().0 * self.level.multiplier()
+    /// Returns the resolved font size in pixels.
+    ///
+    /// Uses the theme's text size when available (in `draw`), or falls
+    /// back to the renderer's default size (in `layout` where theme is
+    /// not available).
+    fn font_size_from_base(&self, base: f32) -> f32 {
+        base * self.level.multiplier()
     }
 }
 
@@ -136,7 +142,7 @@ fn bold_font() -> iced::Font {
 
 impl<'a, Message, Theme, Renderer> Widget<Message, Theme, Renderer> for Text<'a, Theme>
 where
-    Theme: Catalog + 'a,
+    Theme: Catalog + FontSizeBase + 'a,
     Renderer: renderer::Renderer + text::Renderer<Font = iced::Font>,
 {
     fn size(&self) -> Size<Length> {
@@ -149,7 +155,7 @@ where
         renderer: &Renderer,
         limits: &layout::Limits,
     ) -> layout::Node {
-        let font_size = self.font_size(renderer);
+        let font_size = self.font_size_from_base(renderer.default_size().0);
         let font = bold_font();
         let limits = limits.width(Length::Shrink).height(Length::Shrink);
         let max = limits.max();
@@ -184,7 +190,7 @@ where
         let color = self.color.or(theme_style.color).unwrap_or(style.text_color);
 
         let bounds = layout.bounds();
-        let font_size = self.font_size(renderer);
+        let font_size = self.font_size_from_base(theme.text_size());
         let font = bold_font();
 
         renderer.fill_text(
@@ -220,7 +226,7 @@ where
 impl<'a, Message, Theme, Renderer> From<Text<'a, Theme>> for Element<'a, Message, Theme, Renderer>
 where
     Message: 'a,
-    Theme: Catalog + 'a,
+    Theme: Catalog + FontSizeBase + 'a,
     Renderer: renderer::Renderer + text::Renderer<Font = iced::Font> + 'a,
 {
     fn from(text: Text<'a, Theme>) -> Self {

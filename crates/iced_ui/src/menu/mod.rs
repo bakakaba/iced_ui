@@ -29,7 +29,7 @@ pub use style::{Catalog, Style, StyleFn, default};
 pub use trigger::MenuButton;
 
 use crate::button::{self, Button, Variant};
-use crate::{PaddingSource, RoundnessBase, SpacingBase};
+use crate::{FontSizeBase, PaddingSource, RoundnessBase, SpacingBase};
 
 use item::collect_shortcuts;
 use overlay::{MenuOverlay, Metrics};
@@ -79,7 +79,12 @@ impl State {
 /// [`MenuBar::shortcuts`] for how to wire up keyboard shortcuts.
 pub struct MenuBar<'a, Message, Theme = crate::Theme, Renderer = iced::Renderer>
 where
-    Theme: Catalog + button::Catalog + SpacingBase + RoundnessBase + iced::widget::text::Catalog,
+    Theme: Catalog
+        + button::Catalog
+        + SpacingBase
+        + RoundnessBase
+        + FontSizeBase
+        + iced::widget::text::Catalog,
     Renderer: renderer::Renderer + text::Renderer<Font = Font>,
 {
     menus: Vec<Menu<Message>>,
@@ -94,8 +99,13 @@ where
 impl<'a, Message, Theme, Renderer> MenuBar<'a, Message, Theme, Renderer>
 where
     Message: Clone + 'a,
-    Theme:
-        Catalog + button::Catalog + SpacingBase + RoundnessBase + iced::widget::text::Catalog + 'a,
+    Theme: Catalog
+        + button::Catalog
+        + SpacingBase
+        + RoundnessBase
+        + FontSizeBase
+        + iced::widget::text::Catalog
+        + 'a,
     Renderer: renderer::Renderer + text::Renderer<Font = Font> + 'a,
 {
     /// Creates an empty [`MenuBar`].
@@ -182,7 +192,12 @@ where
 
 impl<Message: Clone + 'static, Theme, Renderer> MenuBar<'_, Message, Theme, Renderer>
 where
-    Theme: Catalog + button::Catalog + SpacingBase + RoundnessBase + iced::widget::text::Catalog,
+    Theme: Catalog
+        + button::Catalog
+        + SpacingBase
+        + RoundnessBase
+        + FontSizeBase
+        + iced::widget::text::Catalog,
     Renderer: renderer::Renderer + text::Renderer<Font = Font>,
 {
     /// Returns the list of all `(KeyBinding, Message)` pairs declared
@@ -204,6 +219,7 @@ where
         + button::Catalog
         + SpacingBase
         + RoundnessBase
+        + FontSizeBase
         + iced::widget::text::Catalog
         + 'static,
     Renderer: renderer::Renderer + text::Renderer<Font = Font> + 'static,
@@ -217,8 +233,13 @@ impl<'a, Message, Theme, Renderer> Widget<Message, Theme, Renderer>
     for MenuBar<'a, Message, Theme, Renderer>
 where
     Message: Clone + 'a,
-    Theme:
-        Catalog + button::Catalog + SpacingBase + RoundnessBase + iced::widget::text::Catalog + 'a,
+    Theme: Catalog
+        + button::Catalog
+        + SpacingBase
+        + RoundnessBase
+        + FontSizeBase
+        + iced::widget::text::Catalog
+        + 'a,
     Renderer: renderer::Renderer + text::Renderer<Font = Font> + 'a,
 {
     fn tag(&self) -> tree::Tag {
@@ -525,8 +546,13 @@ impl<'a, Message, Theme, Renderer> From<MenuBar<'a, Message, Theme, Renderer>>
     for Element<'a, Message, Theme, Renderer>
 where
     Message: Clone + 'a,
-    Theme:
-        Catalog + button::Catalog + SpacingBase + RoundnessBase + iced::widget::text::Catalog + 'a,
+    Theme: Catalog
+        + button::Catalog
+        + SpacingBase
+        + RoundnessBase
+        + FontSizeBase
+        + iced::widget::text::Catalog
+        + 'a,
     Renderer: renderer::Renderer + text::Renderer<Font = Font> + 'a,
 {
     fn from(bar: MenuBar<'a, Message, Theme, Renderer>) -> Self {

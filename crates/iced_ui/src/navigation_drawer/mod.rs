@@ -36,7 +36,7 @@ use iced::advanced::{Clipboard, Shell};
 use iced::mouse;
 use iced::{Border, Element, Event, Length, Pixels, Point, Rectangle, Size, Vector};
 
-use crate::{RoundnessBase, SpacingBase};
+use crate::{FontSizeBase, RoundnessBase, SpacingBase};
 
 /// Width of the navigation drawer panel (MD3 spec: 360px).
 const DRAWER_WIDTH: f32 = 360.0;
@@ -200,7 +200,7 @@ impl<'a, Message, Theme, Renderer> Widget<Message, Theme, Renderer>
     for NavigationDrawer<'a, Message, Theme, Renderer>
 where
     Message: Clone + 'a,
-    Theme: Catalog + SpacingBase + RoundnessBase + 'a,
+    Theme: Catalog + SpacingBase + RoundnessBase + FontSizeBase + 'a,
     Renderer: renderer::Renderer + text::Renderer + 'a,
 {
     fn tag(&self) -> tree::Tag {
@@ -428,7 +428,7 @@ impl<Message, Theme, Renderer> overlay::Overlay<Message, Theme, Renderer>
     for DrawerOverlay<'_, '_, Message, Theme, Renderer>
 where
     Message: Clone,
-    Theme: Catalog + SpacingBase + RoundnessBase,
+    Theme: Catalog + SpacingBase + RoundnessBase + FontSizeBase,
     Renderer: renderer::Renderer + text::Renderer,
 {
     fn layout(&mut self, _renderer: &Renderer, _bounds: Size) -> layout::Node {
@@ -555,7 +555,7 @@ where
                         Text {
                             content: label.clone(),
                             bounds: Size::new(text_width, *h),
-                            size: Pixels(14.0),
+                            size: Pixels(theme.text_size() * 0.875),
                             line_height: text::LineHeight::Relative(1.0),
                             font: renderer.default_font(),
                             align_x: iced::alignment::Horizontal::Left.into(),
@@ -590,7 +590,7 @@ where
                         Text {
                             content: header_text.clone(),
                             bounds: Size::new(drawer_bounds.width - DRAWER_PADDING * 4.0, *h),
-                            size: Pixels(14.0),
+                            size: Pixels(theme.text_size() * 0.875),
                             line_height: text::LineHeight::Relative(1.0),
                             font: renderer.default_font(),
                             align_x: iced::alignment::Horizontal::Left.into(),
@@ -694,7 +694,7 @@ impl<'a, Message, Theme, Renderer> From<NavigationDrawer<'a, Message, Theme, Ren
     for Element<'a, Message, Theme, Renderer>
 where
     Message: Clone + 'a,
-    Theme: Catalog + SpacingBase + RoundnessBase + 'a,
+    Theme: Catalog + SpacingBase + RoundnessBase + FontSizeBase + 'a,
     Renderer: renderer::Renderer + text::Renderer + 'a,
 {
     fn from(drawer: NavigationDrawer<'a, Message, Theme, Renderer>) -> Self {

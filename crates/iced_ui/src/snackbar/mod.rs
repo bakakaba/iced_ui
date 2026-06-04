@@ -30,7 +30,7 @@ use iced::advanced::{Clipboard, Shell};
 use iced::mouse;
 use iced::{Element, Event, Length, Pixels, Point, Rectangle, Size, Vector};
 
-use crate::{RoundnessBase, SpacingBase};
+use crate::{FontSizeBase, RoundnessBase, SpacingBase};
 
 /// Height of the snackbar bar in logical pixels.
 const BAR_HEIGHT: f32 = 48.0;
@@ -117,7 +117,7 @@ impl<'a, Message, Theme, Renderer> Widget<Message, Theme, Renderer>
     for Snackbar<'a, Message, Theme, Renderer>
 where
     Message: Clone + 'a,
-    Theme: Catalog + SpacingBase + RoundnessBase + 'a,
+    Theme: Catalog + SpacingBase + RoundnessBase + FontSizeBase + 'a,
     Renderer: renderer::Renderer + text::Renderer + 'a,
 {
     fn tag(&self) -> tree::Tag {
@@ -273,7 +273,7 @@ impl<Message, Theme, Renderer> overlay::Overlay<Message, Theme, Renderer>
     for SnackbarOverlay<'_, '_, Message, Theme, Renderer>
 where
     Message: Clone,
-    Theme: Catalog + SpacingBase + RoundnessBase,
+    Theme: Catalog + SpacingBase + RoundnessBase + FontSizeBase,
     Renderer: renderer::Renderer + text::Renderer,
 {
     fn layout(&mut self, _renderer: &Renderer, _bounds: Size) -> layout::Node {
@@ -322,7 +322,7 @@ where
                 Text {
                     content: msg.to_string(),
                     bounds: Size::new(available_width.max(0.0), BAR_HEIGHT),
-                    size: Pixels(14.0),
+                    size: Pixels(theme.text_size() * 0.875),
                     line_height: text::LineHeight::Relative(1.0),
                     font: renderer.default_font(),
                     align_x: iced::alignment::Horizontal::Left.into(),
@@ -346,7 +346,7 @@ where
                 Text {
                     content: label.clone(),
                     bounds: Size::new(btn_width, BAR_HEIGHT),
-                    size: Pixels(14.0),
+                    size: Pixels(theme.text_size() * 0.875),
                     line_height: text::LineHeight::Relative(1.0),
                     font: renderer.default_font(),
                     align_x: iced::alignment::Horizontal::Center.into(),
@@ -368,7 +368,7 @@ where
                 Text {
                     content: "\u{2715}".to_string(), // ✕
                     bounds: Size::new(24.0, BAR_HEIGHT),
-                    size: Pixels(16.0),
+                    size: Pixels(theme.text_size()),
                     line_height: text::LineHeight::Relative(1.0),
                     font: renderer.default_font(),
                     align_x: iced::alignment::Horizontal::Center.into(),
@@ -486,7 +486,7 @@ impl<'a, Message, Theme, Renderer> From<Snackbar<'a, Message, Theme, Renderer>>
     for Element<'a, Message, Theme, Renderer>
 where
     Message: Clone + 'a,
-    Theme: Catalog + SpacingBase + RoundnessBase + 'a,
+    Theme: Catalog + SpacingBase + RoundnessBase + FontSizeBase + 'a,
     Renderer: renderer::Renderer + text::Renderer + 'a,
 {
     fn from(snackbar: Snackbar<'a, Message, Theme, Renderer>) -> Self {

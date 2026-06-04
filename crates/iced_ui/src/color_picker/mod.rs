@@ -26,7 +26,7 @@ use iced::keyboard;
 use iced::mouse;
 use iced::{Background, Border, Color, Element, Event, Length, Point, Rectangle, Size, Vector};
 
-use crate::{RoundnessBase, SpacingBase};
+use crate::{FontSizeBase, RoundnessBase, SpacingBase};
 
 // -- HSV color model --
 
@@ -294,7 +294,7 @@ impl<'a, Message, Theme, Renderer> Widget<Message, Theme, Renderer>
     for ColorPicker<'a, Message, Theme, Renderer>
 where
     Message: Clone + 'a,
-    Theme: Catalog + SpacingBase + RoundnessBase + 'a,
+    Theme: Catalog + SpacingBase + RoundnessBase + FontSizeBase + 'a,
     Renderer: renderer::Renderer + text::Renderer + 'a,
 {
     fn tag(&self) -> tree::Tag {
@@ -481,7 +481,7 @@ impl<'a, 'b, Message, Theme, Renderer> overlay::Overlay<Message, Theme, Renderer
     for ColorPickerOverlay<'a, 'b, Message, Theme, Renderer>
 where
     Message: Clone + 'a,
-    Theme: Catalog + SpacingBase + RoundnessBase + 'a,
+    Theme: Catalog + SpacingBase + RoundnessBase + FontSizeBase + 'a,
     Renderer: renderer::Renderer + text::Renderer + 'a,
 {
     fn layout(&mut self, _renderer: &Renderer, viewport: Size) -> layout::Node {
@@ -701,7 +701,7 @@ where
 
         // -- Color code text --
         let code_text = self.state.color_format.format(hsva);
-        let text_size = iced::Pixels(13.0);
+        let text_size = iced::Pixels(theme.text_size() * 0.8125);
         renderer.fill_text(
             iced::advanced::Text {
                 content: code_text,
@@ -951,7 +951,7 @@ impl<'a, Message, Theme, Renderer> From<ColorPicker<'a, Message, Theme, Renderer
     for Element<'a, Message, Theme, Renderer>
 where
     Message: Clone + 'a,
-    Theme: Catalog + SpacingBase + RoundnessBase + 'a,
+    Theme: Catalog + SpacingBase + RoundnessBase + FontSizeBase + 'a,
     Renderer: renderer::Renderer + text::Renderer + 'a,
 {
     fn from(picker: ColorPicker<'a, Message, Theme, Renderer>) -> Self {

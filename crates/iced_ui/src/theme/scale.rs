@@ -6,10 +6,10 @@
 //! changing `spacing` to `6` rescales the same factor to `12.0`
 //! without touching any call site.
 //!
-//! Font sizes follow a different shape — there is no `font_size_base`
-//! on the [`Theme`]. A [`FontSize::Default`] resolves to iced's
-//! built-in default text size; a [`FontSize::Px`] is an absolute
-//! override.
+//! Text sizes are absolute pixel values stored on the [`Theme`]
+//! (defaulting to iced's built-in 16px). Widgets derive their font
+//! sizes as fractions or multiples of this base via
+//! [`Theme::text(factor)`](crate::Theme::text).
 //!
 //! [`Space::sx(2.0)`]: Space::sx
 //! [`Theme`]: crate::Theme
@@ -41,6 +41,17 @@ pub trait SpacingBase {
 pub trait RoundnessBase {
     /// Returns the roundness base unit (an integer step size).
     fn roundness(&self) -> u8;
+}
+
+/// Trait implemented by theme types that expose a base text size.
+///
+/// Widgets in `iced_ui` that derive font sizes from the theme
+/// require their `Theme` generic to implement this trait.
+///
+/// [`Theme`]: crate::Theme
+pub trait FontSizeBase {
+    /// Returns the base text size in logical pixels.
+    fn text_size(&self) -> f32;
 }
 
 /// A spacing token, resolved against [`Theme::spacing`].
@@ -142,18 +153,17 @@ impl From<u8> for Roundness {
     }
 }
 
-/// A text size token. Either inherits iced's built-in default text
-/// size, or specifies an absolute override.
+/// A text size token, resolved against the theme's base text size.
 ///
-/// `iced_ui` does not maintain a `font_size_base` on the [`Theme`];
-/// this type intentionally avoids the multiplier shape used by
-/// [`Space`] and [`Roundness`] because typography looks best when
-/// driven by an absolute value, not a scaled one.
+/// [`FontSize::Default`] uses the theme's configured
+/// [`text_size`](crate::Theme::text_size) (which itself defaults to
+/// iced's built-in 16px). [`FontSize::Px`] is an absolute override
+/// that ignores the theme base.
 ///
 /// [`Theme`]: crate::Theme
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub enum FontSize {
-    /// Inherit the renderer's default text size.
+    /// Use the theme's base text size.
     #[default]
     Default,
     /// Use an absolute size, in logical pixels.
@@ -161,11 +171,10 @@ pub enum FontSize {
 }
 
 impl FontSize {
-    /// Resolves this font size, falling back to `default_size` when
-    /// the variant is [`FontSize::Default`].
-    pub fn resolve(self, default_size: f32) -> f32 {
+    /// Resolves this font size against the given base text size.
+    pub fn resolve(self, base: f32) -> f32 {
         match self {
-            Self::Default => default_size,
+            Self::Default => base,
             Self::Px(v) => v,
         }
     }

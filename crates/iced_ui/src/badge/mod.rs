@@ -31,7 +31,7 @@ use iced::alignment;
 use iced::mouse;
 use iced::{Element, Event, Length, Pixels, Point, Rectangle, Size};
 
-use crate::{Space, SpacingBase};
+use crate::{FontSizeBase, Space, SpacingBase};
 
 /// The anchor position of the badge indicator relative to the child widget.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -161,7 +161,7 @@ impl<'a, Message, Theme, Renderer> Widget<Message, Theme, Renderer>
     for Badge<'a, Message, Theme, Renderer>
 where
     Message: 'a,
-    Theme: Catalog + SpacingBase + 'a,
+    Theme: Catalog + SpacingBase + FontSizeBase + 'a,
     Renderer: renderer::Renderer + text::Renderer + 'a,
 {
     fn children(&self) -> Vec<Tree> {
@@ -254,7 +254,7 @@ where
                         value.to_string()
                     };
 
-                    let font_size = 11.0_f32;
+                    let font_size = theme.text_size() * 0.6875;
                     let padding = Space::sx(0.5).resolve(theme.spacing());
 
                     // Measure text width
@@ -366,7 +366,7 @@ impl<'a, Message, Theme, Renderer> From<Badge<'a, Message, Theme, Renderer>>
     for Element<'a, Message, Theme, Renderer>
 where
     Message: 'a,
-    Theme: Catalog + SpacingBase + 'a,
+    Theme: Catalog + SpacingBase + FontSizeBase + 'a,
     Renderer: renderer::Renderer + text::Renderer + 'a,
 {
     fn from(badge: Badge<'a, Message, Theme, Renderer>) -> Self {

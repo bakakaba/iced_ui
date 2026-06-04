@@ -21,7 +21,9 @@ use iced::advanced::renderer;
 use iced::advanced::widget::{Operation, Tree, Widget, tree};
 use iced::advanced::{Clipboard, Shell};
 use iced::mouse;
-use iced::{Element, Event, Length, Rectangle, Size};
+use iced::{Element, Event, Length, Pixels, Rectangle, Size};
+
+use crate::FontSizeBase;
 
 /// Height of the small top app bar in logical pixels (MD3 spec).
 const BAR_HEIGHT: f32 = 64.0;
@@ -97,7 +99,7 @@ impl<'a, Message, Theme, Renderer> Widget<Message, Theme, Renderer>
     for TopAppBar<'a, Message, Theme, Renderer>
 where
     Message: Clone + 'a,
-    Theme: Catalog + 'a,
+    Theme: Catalog + FontSizeBase + 'a,
     Renderer: renderer::Renderer + iced::advanced::text::Renderer + 'a,
 {
     fn tag(&self) -> tree::Tag {
@@ -257,7 +259,7 @@ where
             let text = iced::advanced::text::Text {
                 content: self.title.clone(),
                 bounds: title_bounds,
-                size: renderer.default_size() * 1.25,
+                size: Pixels(theme.text_size() * 1.25),
                 line_height: iced::advanced::text::LineHeight::default(),
                 font: renderer.default_font(),
                 align_x: iced::alignment::Horizontal::Left.into(),
@@ -413,7 +415,7 @@ impl<'a, Message, Theme, Renderer> From<TopAppBar<'a, Message, Theme, Renderer>>
     for Element<'a, Message, Theme, Renderer>
 where
     Message: Clone + 'a,
-    Theme: Catalog + 'a,
+    Theme: Catalog + FontSizeBase + 'a,
     Renderer: renderer::Renderer + iced::advanced::text::Renderer + 'a,
 {
     fn from(bar: TopAppBar<'a, Message, Theme, Renderer>) -> Self {
