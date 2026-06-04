@@ -31,7 +31,7 @@ use iced::alignment;
 use iced::mouse;
 use iced::{Element, Event, Length, Pixels, Point, Rectangle, Size};
 
-use crate::SpacingBase;
+use crate::{Space, SpacingBase};
 
 /// The anchor position of the badge indicator relative to the child widget.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -69,23 +69,6 @@ impl Position {
             Self::TopLeft => Point::new(bounds.x, bounds.y),
         }
     }
-
-    /// Returns the outward offset direction for this position.
-    ///
-    /// Each component is −1, 0, or 1 indicating the direction away from
-    /// the child content center.
-    fn offset_direction(self) -> (f32, f32) {
-        match self {
-            Self::Top => (0.0, -1.0),
-            Self::TopRight => (1.0, -1.0),
-            Self::Right => (1.0, 0.0),
-            Self::BottomRight => (1.0, 1.0),
-            Self::Bottom => (0.0, 1.0),
-            Self::BottomLeft => (-1.0, 1.0),
-            Self::Left => (-1.0, 0.0),
-            Self::TopLeft => (-1.0, -1.0),
-        }
-    }
 }
 
 /// The content shown inside the badge indicator.
@@ -107,6 +90,7 @@ where
     badge_content: Content,
     position: Position,
     max: u32,
+    size: Space,
     class: Theme::Class<'a>,
 }
 
@@ -122,6 +106,7 @@ where
             badge_content: Content::Dot,
             position: Position::default(),
             max: 999,
+            size: Space::sx(2.0),
             class: Theme::default(),
         }
     }
@@ -133,6 +118,7 @@ where
             badge_content: Content::Count(value),
             position: Position::default(),
             max: 999,
+            size: Space::sx(2.0),
             class: Theme::default(),
         }
     }
@@ -148,6 +134,19 @@ where
     /// "{max}+". Defaults to 999.
     pub fn max(mut self, max: u32) -> Self {
         self.max = max;
+        self
+    }
+
+    /// Sets the minimum size of the badge indicator.
+    ///
+    /// For dot badges this is the dot diameter. For count badges this
+    /// is the minimum width and height of the pill — the pill grows
+    /// beyond this to fit its content.
+    ///
+    /// Defaults to [`Space::sx(2.0)`], which resolves to `8.0` logical
+    /// pixels at the default theme spacing.
+    pub fn size(mut self, size: impl Into<Space>) -> Self {
+        self.size = size.into();
         self
     }
 
@@ -217,16 +216,13 @@ where
         renderer.with_layer(*viewport, |renderer| {
             let badge_style = Catalog::style(theme, &self.class);
             let bounds = layout.bounds();
-            let anchor = self.position.anchor(&bounds);
-            let (dx, dy) = self.position.offset_direction();
-            // Material Design offset: push the badge center slightly
-            // outward from the child bounds so it doesn't obscure content.
-            let offset = 2.0_f32;
-            let center = Point::new(anchor.x + dx * offset, anchor.y + dy * offset);
+            // Badge is centered on the anchor point (the child's border).
+            let center = self.position.anchor(&bounds);
+            let min_size = self.size.resolve(theme.spacing());
 
             match self.badge_content {
                 Content::Dot => {
-                    let dot_size = 6.0_f32;
+                    let dot_size = min_size;
                     let dot_rect = Rectangle {
                         x: center.x - dot_size / 2.0,
                         y: center.y - dot_size / 2.0,
@@ -259,20 +255,20 @@ where
                     };
 
                     let font_size = 11.0_f32;
-                    let h_padding = 4.0_f32;
-                    let min_width = 16.0_f32;
-                    let height = 16.0_f32;
+                    let padding = Space::sx(0.5).resolve(theme.spacing());
 
                     // Measure text width
                     let text_width = label.len() as f32 * font_size * 0.6;
-                    let badge_width = (text_width + h_padding * 2.0).max(min_width);
-                    let radius = height / 2.0;
+                    let content_height = font_size + padding * 2.0;
+                    let badge_height = content_height.max(min_size);
+                    let badge_width = (text_width + padding * 2.0).max(badge_height);
+                    let radius = badge_height / 2.0;
 
                     let badge_rect = Rectangle {
                         x: center.x - badge_width / 2.0,
-                        y: center.y - height / 2.0,
+                        y: center.y - badge_height / 2.0,
                         width: badge_width,
-                        height,
+                        height: badge_height,
                     };
 
                     renderer.fill_quad(
