@@ -1,5 +1,4 @@
 mod badge;
-mod bottom_sheet;
 mod button;
 mod card;
 mod chip;
@@ -17,6 +16,7 @@ mod navigation_rail;
 mod overview;
 mod screen;
 mod segmented_button;
+mod slide_sheet;
 mod snackbar;
 mod tabs;
 mod text;
@@ -126,7 +126,6 @@ pages! {
     }
     WIDGETS {
         Badge(badge::BadgePage),
-        BottomSheet(bottom_sheet::BottomSheetPage),
         Button(button::ButtonPage),
         Card(card::CardPage),
         Chip(chip::ChipPage),
@@ -143,6 +142,7 @@ pages! {
         NavigationRail(navigation_rail::NavigationRailPage),
         Screen(screen::ScreenPage),
         SegmentedButton(segmented_button::SegmentedButtonPage),
+        SlideSheet(slide_sheet::SlideSheetPage),
         Snackbar(snackbar::SnackbarPage),
         Tabs(tabs::TabsPage),
         Text(text::TextPage),

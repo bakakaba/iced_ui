@@ -16,7 +16,6 @@
 #![warn(missing_docs)]
 
 pub mod badge;
-pub mod bottom_sheet;
 pub mod button;
 pub mod card;
 pub mod chip;
@@ -34,6 +33,7 @@ pub mod navigation_rail;
 pub mod number_input;
 pub mod screen;
 pub mod segmented_button;
+pub mod slide_sheet;
 pub mod snackbar;
 pub mod tabs;
 pub mod text;
@@ -42,7 +42,6 @@ pub mod theme;
 pub mod top_app_bar;
 
 pub use badge::Badge;
-pub use bottom_sheet::BottomSheet;
 pub use button::Button;
 pub use card::{Card, Variant};
 pub use chip::Chip;
@@ -62,6 +61,7 @@ pub use navigation_rail::NavigationRail;
 pub use number_input::NumberInput;
 pub use screen::Screen;
 pub use segmented_button::{Segment, SegmentedButton};
+pub use slide_sheet::SlideSheet;
 pub use snackbar::Snackbar;
 pub use tabs::Tabs;
 pub use text::Text;

@@ -1,16 +1,14 @@
-//! Styling primitives for the [`BottomSheet`](super::BottomSheet) widget.
+//! Styling primitives for the [`SlideSheet`](super::SlideSheet) widget.
 
 use iced::{Background, Border, Color, Shadow, Vector};
 
 use crate::{Roundness, Theme};
 
-/// The visual style of a [`BottomSheet`](super::BottomSheet).
+/// The visual style of a [`SlideSheet`](super::SlideSheet).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Style {
     /// Background of the sheet panel.
     pub background: Background,
-    /// Color of the scrim (semi-transparent overlay behind the sheet).
-    pub scrim_color: Color,
     /// Border of the sheet panel.
     pub border: Border,
     /// Shadow (elevation) of the sheet panel.
@@ -22,7 +20,7 @@ pub struct Style {
 /// A function that returns a [`Style`] for a given theme.
 pub type StyleFn<'a, Theme> = Box<dyn Fn(&Theme) -> Style + 'a>;
 
-/// Catalog of theme-driven styles for a [`BottomSheet`](super::BottomSheet).
+/// Catalog of theme-driven styles for a [`SlideSheet`](super::SlideSheet).
 pub trait Catalog {
     /// The identifier of a particular style.
     type Class<'a>;
@@ -46,26 +44,25 @@ impl Catalog for Theme {
     }
 }
 
-/// Default theme
+/// Default theme style.
 pub fn default(theme: &Theme) -> Style {
     let palette = theme.extended_palette();
-    let radius = theme.radius(Roundness::sx(4.0));
+    let radius = theme.radius(Roundness::sx(3.0));
 
     Style {
         background: Background::Color(palette.background.base.color),
-        scrim_color: Color::from_rgba(0.0, 0.0, 0.0, 0.32),
         border: Border {
             radius: iced::border::Radius {
                 top_left: radius,
                 top_right: radius,
-                bottom_right: 0.0,
-                bottom_left: 0.0,
+                bottom_right: radius,
+                bottom_left: radius,
             },
             ..Border::default()
         },
         shadow: Shadow {
             color: Color::from_rgba(0.0, 0.0, 0.0, 0.3),
-            offset: Vector::new(0.0, -2.0),
+            offset: Vector::new(0.0, 0.0),
             blur_radius: 12.0,
         },
         handle_color: palette.background.strong.color,
