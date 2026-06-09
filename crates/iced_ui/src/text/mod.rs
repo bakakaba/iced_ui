@@ -29,18 +29,21 @@ use iced::{Color, Element, Length, Pixels, Rectangle, Size};
 use crate::FontSizeBase;
 
 /// The heading level, determining font size relative to the default.
+///
+/// Each variant scales the base font size by the factor returned from
+/// [`Level::multiplier`]. All levels use bold weight.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum Level {
-    /// 3x default font size, bold.
+    /// Heading 1
     #[default]
     H1,
-    /// 2x default font size, bold.
+    /// Heading 2
     H2,
-    /// 1.5x default font size, bold.
+    /// Heading 3
     H3,
-    /// 1.2x default font size, bold.
+    /// Heading 4
     H4,
-    /// 1x default font size, bold.
+    /// Heading 5
     H5,
 }
 
@@ -85,27 +88,27 @@ where
         }
     }
 
-    /// Creates an H1 heading (3x default size, bold).
+    /// Creates an H1 heading.
     pub fn h1(content: impl Into<String>) -> Self {
         Self::new(content, Level::H1)
     }
 
-    /// Creates an H2 heading (2x default size, bold).
+    /// Creates an H2 heading.
     pub fn h2(content: impl Into<String>) -> Self {
         Self::new(content, Level::H2)
     }
 
-    /// Creates an H3 heading (1.5x default size, bold).
+    /// Creates an H3 heading.
     pub fn h3(content: impl Into<String>) -> Self {
         Self::new(content, Level::H3)
     }
 
-    /// Creates an H4 heading (1.2x default size, bold).
+    /// Creates an H4 heading.
     pub fn h4(content: impl Into<String>) -> Self {
         Self::new(content, Level::H4)
     }
 
-    /// Creates an H5 heading (1x default size, bold).
+    /// Creates an H5 heading.
     pub fn h5(content: impl Into<String>) -> Self {
         Self::new(content, Level::H5)
     }

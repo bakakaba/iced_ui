@@ -150,9 +150,8 @@ where
     }
 
     /// Sets the outer padding around the bar's row of labels.
-    /// Defaults to [`Space::sx(1.0)`](crate::Space::sx), which
-    /// resolves to `4.0` logical pixels at the default
-    /// [`spacing`].
+    /// Defaults to [`Space::sx(1.0)`](crate::Space::sx) — i.e. `1×`
+    /// the theme's base [`spacing`](crate::Theme::DEFAULT_SPACING).
     ///
     /// Accepts a [`Space`](crate::Space), an [`iced::Padding`] or a
     /// raw `[f32; 2]` (absolute).
