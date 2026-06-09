@@ -1,10 +1,9 @@
 use iced::widget::{column, row, text};
 use iced_ui::fab::{Fab, FabSize};
+use iced_ui::icons::{self, Icon};
 use iced_ui::text::Text;
-use lucide_icons::Icon;
 
 use crate::Element;
-use crate::icons::lucide;
 use crate::state::ActionLog;
 
 #[derive(Debug, Clone)]
@@ -26,21 +25,21 @@ impl super::PageView for FabPage {
     }
 
     fn view(&self, _log: &ActionLog) -> Element<'_, Msg> {
-        let small_fab = Fab::new(lucide(Icon::Plus).size(18))
+        let small_fab = Fab::new(icons::icon(Icon::Plus).size(18))
             .size(FabSize::Small)
             .on_press(Msg::Pressed);
 
-        let regular_fab = Fab::new(lucide(Icon::Plus).size(24)).on_press(Msg::Pressed);
+        let regular_fab = Fab::new(icons::icon(Icon::Plus).size(24)).on_press(Msg::Pressed);
 
-        let large_fab = Fab::new(lucide(Icon::Plus).size(36))
+        let large_fab = Fab::new(icons::icon(Icon::Plus).size(36))
             .size(FabSize::Large)
             .on_press(Msg::Pressed);
 
-        let extended_fab = Fab::new(lucide(Icon::Plus).size(18))
+        let extended_fab = Fab::new(icons::icon(Icon::Plus).size(18))
             .label(text("Create").size(16))
             .on_press(Msg::Pressed);
 
-        let lowered_fab = Fab::new(lucide(Icon::Plus).size(24))
+        let lowered_fab = Fab::new(icons::icon(Icon::Plus).size(24))
             .lowered()
             .on_press(Msg::Pressed);
 

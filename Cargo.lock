@@ -830,7 +830,6 @@ version = "0.1.5"
 dependencies = [
  "iced",
  "iced_ui",
- "lucide-icons",
 ]
 
 [[package]]
@@ -1668,6 +1667,7 @@ name = "iced_ui"
 version = "0.1.5"
 dependencies = [
  "iced",
+ "lucide-icons",
  "resvg 0.47.0",
  "tiny-skia 0.12.0",
  "usvg 0.47.0",

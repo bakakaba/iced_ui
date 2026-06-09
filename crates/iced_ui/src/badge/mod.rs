@@ -33,43 +33,9 @@ use iced::{Element, Event, Length, Pixels, Point, Rectangle, Size};
 
 use crate::{FontSizeBase, Space, SpacingBase};
 
-/// The anchor position of the badge indicator relative to the child widget.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum Position {
-    /// Centered on the top edge.
-    Top,
-    /// Centered on the top-right corner.
-    #[default]
-    TopRight,
-    /// Centered on the right edge.
-    Right,
-    /// Centered on the bottom-right corner.
-    BottomRight,
-    /// Centered on the bottom edge.
-    Bottom,
-    /// Centered on the bottom-left corner.
-    BottomLeft,
-    /// Centered on the left edge.
-    Left,
-    /// Centered on the top-left corner.
-    TopLeft,
-}
-
-impl Position {
-    /// Returns the anchor point (x, y) on the child bounds for this position.
-    fn anchor(self, bounds: &Rectangle) -> Point {
-        match self {
-            Self::Top => Point::new(bounds.x + bounds.width / 2.0, bounds.y),
-            Self::TopRight => Point::new(bounds.x + bounds.width, bounds.y),
-            Self::Right => Point::new(bounds.x + bounds.width, bounds.y + bounds.height / 2.0),
-            Self::BottomRight => Point::new(bounds.x + bounds.width, bounds.y + bounds.height),
-            Self::Bottom => Point::new(bounds.x + bounds.width / 2.0, bounds.y + bounds.height),
-            Self::BottomLeft => Point::new(bounds.x, bounds.y + bounds.height),
-            Self::Left => Point::new(bounds.x, bounds.y + bounds.height / 2.0),
-            Self::TopLeft => Point::new(bounds.x, bounds.y),
-        }
-    }
-}
+/// Re-export the shared [`Position`] enum
+/// so existing `use iced_ui::badge::Position` paths keep working.
+pub use crate::position::Position;
 
 /// The content shown inside the badge indicator.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -104,7 +70,7 @@ where
         Self {
             content: content.into(),
             badge_content: Content::Dot,
-            position: Position::default(),
+            position: Position::TopRight,
             max: 999,
             size: Space::sx(1.0),
             class: Theme::default(),
@@ -116,7 +82,7 @@ where
         Self {
             content: content.into(),
             badge_content: Content::Count(value),
-            position: Position::default(),
+            position: Position::TopRight,
             max: 999,
             size: Space::sx(1.0),
             class: Theme::default(),
@@ -143,7 +109,7 @@ where
     /// is the minimum width and height of the pill — the pill grows
     /// beyond this to fit its content.
     ///
-    /// Defaults to [`Space::sx(1.0)`], which resolves to `8.0` logical
+    /// Defaults to [`Space::sx(1.0)`](Space::sx), which resolves to `8.0` logical
     /// pixels at the default theme spacing.
     pub fn size(mut self, size: impl Into<Space>) -> Self {
         self.size = size.into();

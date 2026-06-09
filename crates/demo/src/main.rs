@@ -1,7 +1,6 @@
 //! Kitchen-sink demo for every `iced_ui` component.
 
 mod app;
-pub(crate) mod icons;
 mod message;
 mod pages;
 mod state;
@@ -19,6 +18,6 @@ pub fn main() -> iced::Result {
         .title("iced_ui demo")
         .subscription(Demo::subscription)
         .theme(Demo::theme)
-        .font(lucide_icons::LUCIDE_FONT_BYTES)
+        .font(iced_ui::icons::FONT_BYTES)
         .run()
 }

@@ -58,6 +58,7 @@ where
     on_press: Option<Message>,
     enabled: bool,
     focused: bool,
+    width: Length,
     class: Theme::Class<'a>,
 }
 
@@ -76,6 +77,7 @@ where
             on_press: None,
             enabled: true,
             focused: false,
+            width: Length::Shrink,
             class: Theme::default(),
         }
     }
@@ -123,6 +125,12 @@ where
         self
     }
 
+    /// Sets the width of the button. Defaults to [`Length::Shrink`].
+    pub fn width(mut self, width: impl Into<Length>) -> Self {
+        self.width = width.into();
+        self
+    }
+
     /// Sets the style class.
     pub fn style(mut self, class: impl Into<Theme::Class<'a>>) -> Self {
         self.class = class.into();
@@ -160,7 +168,7 @@ where
     }
 
     fn size(&self) -> Size<Length> {
-        Size::new(Length::Shrink, Length::Shrink)
+        Size::new(self.width, Length::Shrink)
     }
 
     fn layout(
@@ -182,13 +190,19 @@ where
                 .as_widget_mut()
                 .layout(&mut tree.children[0], renderer, &content_limits);
 
-        // Center content vertically within the button height.
+        // Determine final button width based on the `width` property.
         let content_size = content_node.size();
-        let content_x = h_padding;
+        let shrink_width = h_padding + content_size.width + h_padding;
+        let total_width = match self.width {
+            Length::Shrink => shrink_width,
+            Length::Fill | Length::FillPortion(_) => limits.max().width,
+            Length::Fixed(w) => w,
+        };
+
+        // Center content within the button.
+        let content_x = (total_width - content_size.width) / 2.0;
         let content_y = (height - content_size.height) / 2.0;
         content_node = content_node.move_to(iced::Point::new(content_x, content_y));
-
-        let total_width = h_padding + content_size.width + h_padding;
 
         layout::Node::with_children(Size::new(total_width, height), vec![content_node])
     }

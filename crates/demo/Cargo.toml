@@ -6,5 +6,4 @@ publish = false
 
 [dependencies]
 iced = { version = "0.14", features = ["advanced", "image", "svg"] }
-iced_ui = { path = "../iced_ui", version = "0.1.5" }
-lucide-icons = { version = "1", features = ["iced"] }
+iced_ui = { path = "../iced_ui", version = "0.1.5", features = ["lucide"] }

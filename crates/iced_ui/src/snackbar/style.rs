@@ -4,6 +4,8 @@ use iced::{Background, Border, Color, Shadow, Vector};
 
 use crate::{Roundness, Theme};
 
+use super::Severity;
+
 /// The visual style of a [`Snackbar`](super::Snackbar).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Style {
@@ -17,10 +19,13 @@ pub struct Style {
     pub border: Border,
     /// Shadow (elevation) of the snackbar bar.
     pub shadow: Shadow,
+    /// Optional accent color for the severity left border and icon.
+    /// When `None`, no severity indicator is drawn.
+    pub severity_color: Option<Color>,
 }
 
-/// A function that returns a [`Style`] for a given theme.
-pub type StyleFn<'a, Theme> = Box<dyn Fn(&Theme) -> Style + 'a>;
+/// A function that returns a [`Style`] for a given theme and severity.
+pub type StyleFn<'a, Theme> = Box<dyn Fn(&Theme, Severity) -> Style + 'a>;
 
 /// Catalog of theme-driven styles for a [`Snackbar`](super::Snackbar).
 pub trait Catalog {
@@ -30,8 +35,8 @@ pub trait Catalog {
     /// Returns the default [`Self::Class`].
     fn default<'a>() -> Self::Class<'a>;
 
-    /// Resolves a [`Style`] for the given class.
-    fn style(&self, class: &Self::Class<'_>) -> Style;
+    /// Resolves a [`Style`] for the given class and severity.
+    fn style(&self, class: &Self::Class<'_>, severity: Severity) -> Style;
 }
 
 impl Catalog for Theme {
@@ -41,15 +46,23 @@ impl Catalog for Theme {
         Box::new(default)
     }
 
-    fn style(&self, class: &Self::Class<'_>) -> Style {
-        class(self)
+    fn style(&self, class: &Self::Class<'_>, severity: Severity) -> Style {
+        class(self, severity)
     }
 }
 
 /// The default snackbar style.
-pub fn default(theme: &Theme) -> Style {
+pub fn default(theme: &Theme, severity: Severity) -> Style {
     let palette = theme.extended_palette();
     let radius = theme.radius(Roundness::sx(1.0));
+
+    let severity_color = match severity {
+        Severity::Neutral => None,
+        Severity::Information => Some(theme.information.base.color),
+        Severity::Success => Some(palette.success.base.color),
+        Severity::Warning => Some(palette.warning.base.color),
+        Severity::Error => Some(palette.danger.base.color),
+    };
 
     Style {
         background: Background::Color(Color::from_rgb(
@@ -66,5 +79,6 @@ pub fn default(theme: &Theme) -> Style {
             offset: Vector::new(0.0, 2.0),
             blur_radius: 8.0,
         },
+        severity_color,
     }
 }

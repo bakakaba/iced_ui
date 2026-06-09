@@ -1,10 +1,9 @@
 use iced::widget::{column, row, text};
 use iced_ui::icon_button::{self, IconButton};
+use iced_ui::icons::{self, Icon};
 use iced_ui::text::Text;
-use lucide_icons::Icon;
 
 use crate::Element;
-use crate::icons::lucide;
 use crate::state::ActionLog;
 
 #[derive(Debug, Clone)]
@@ -31,21 +30,21 @@ impl super::PageView for IconButtonPage {
     }
 
     fn view(&self, _log: &ActionLog) -> Element<'_, Msg> {
-        let standard = IconButton::new(lucide(Icon::X).size(18)).on_press(Msg::Noop);
+        let standard = IconButton::new(icons::icon(Icon::X).size(18)).on_press(Msg::Noop);
 
-        let filled = IconButton::new(lucide(Icon::Plus).size(18))
+        let filled = IconButton::new(icons::icon(Icon::Plus).size(18))
             .variant(icon_button::Variant::Filled)
             .on_press(Msg::Noop);
 
-        let tonal = IconButton::new(lucide(Icon::CircleHelp).size(18))
+        let tonal = IconButton::new(icons::icon(Icon::CircleHelp).size(18))
             .variant(icon_button::Variant::FilledTonal)
             .on_press(Msg::Noop);
 
-        let outlined = IconButton::new(lucide(Icon::AlertTriangle).size(18))
+        let outlined = IconButton::new(icons::icon(Icon::AlertTriangle).size(18))
             .variant(icon_button::Variant::Outlined)
             .on_press(Msg::Noop);
 
-        let toggle = IconButton::new(lucide(Icon::Star).size(18))
+        let toggle = IconButton::new(icons::icon(Icon::Star).size(18))
             .variant(icon_button::Variant::Filled)
             .toggled(self.toggled)
             .on_press(Msg::Toggled);

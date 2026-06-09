@@ -1,10 +1,9 @@
 use iced::widget::{column, text};
+use iced_ui::icons::{self, Icon};
 use iced_ui::navigation_bar::{self, NavigationBar};
 use iced_ui::text::Text;
-use lucide_icons::Icon;
 
 use crate::Element;
-use crate::icons::lucide;
 use crate::state::ActionLog;
 
 #[derive(Debug, Clone)]
@@ -21,9 +20,9 @@ impl super::PageView for NavigationBarPage {
 
     fn view(&self, _log: &ActionLog) -> Element<'_, Msg> {
         let bar = NavigationBar::new(|_idx| Msg::Noop)
-            .push(navigation_bar::Destination::new("Home").icon(lucide(Icon::Home)))
-            .push(navigation_bar::Destination::new("Search").icon(lucide(Icon::Search)))
-            .push(navigation_bar::Destination::new("Profile").icon(lucide(Icon::User)))
+            .push(navigation_bar::Destination::new("Home").icon(icons::icon(Icon::Home)))
+            .push(navigation_bar::Destination::new("Search").icon(icons::icon(Icon::Search)))
+            .push(navigation_bar::Destination::new("Profile").icon(icons::icon(Icon::User)))
             .active(0);
 
         column![

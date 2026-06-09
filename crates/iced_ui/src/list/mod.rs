@@ -175,14 +175,14 @@ where
     }
 
     /// Sets the outer padding of the [`List`]. Defaults to
-    /// [`Space::sx(1.0)`].
+    /// [`Space::sx(1.0)`](Space::sx).
     pub fn padding(mut self, padding: impl Into<PaddingSource>) -> Self {
         self.padding = padding.into();
         self
     }
 
     /// Sets the inner padding of each item row. Defaults to
-    /// [`Space::sx(1.0)`].
+    /// [`Space::sx(1.0)`](Space::sx).
     pub fn item_padding(mut self, padding: impl Into<PaddingSource>) -> Self {
         self.item_padding = padding.into();
         self
