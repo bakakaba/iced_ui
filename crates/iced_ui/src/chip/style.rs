@@ -88,7 +88,7 @@ impl Catalog for Theme {
 /// The default chip style.
 pub fn default(theme: &Theme, kind: Kind, selected: bool, status: Status) -> Style {
     let palette = theme.extended_palette();
-    let radius = theme.radius(Roundness::sx(2.0));
+    let radius = theme.radius(Roundness::sx(1.0));
 
     let base = if selected {
         Style {

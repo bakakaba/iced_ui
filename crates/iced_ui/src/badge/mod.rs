@@ -106,7 +106,7 @@ where
             badge_content: Content::Dot,
             position: Position::default(),
             max: 999,
-            size: Space::sx(2.0),
+            size: Space::sx(1.0),
             class: Theme::default(),
         }
     }
@@ -118,7 +118,7 @@ where
             badge_content: Content::Count(value),
             position: Position::default(),
             max: 999,
-            size: Space::sx(2.0),
+            size: Space::sx(1.0),
             class: Theme::default(),
         }
     }
@@ -143,7 +143,7 @@ where
     /// is the minimum width and height of the pill — the pill grows
     /// beyond this to fit its content.
     ///
-    /// Defaults to [`Space::sx(2.0)`], which resolves to `8.0` logical
+    /// Defaults to [`Space::sx(1.0)`], which resolves to `8.0` logical
     /// pixels at the default theme spacing.
     pub fn size(mut self, size: impl Into<Space>) -> Self {
         self.size = size.into();

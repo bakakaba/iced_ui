@@ -80,7 +80,7 @@ impl Catalog for Theme {
 ///   the widget's draw logic which handles corner rounding per position).
 pub fn default(theme: &Theme, selected: bool, status: SegmentStatus) -> SegmentStyle {
     let palette = theme.extended_palette();
-    let radius = theme.radius(Roundness::sx(2.5));
+    let radius = theme.radius(Roundness::sx(1.0));
 
     let base = if selected {
         SegmentStyle {

@@ -22,7 +22,7 @@ impl super::PageView for DividerPage {
             text("Horizontal and vertical separators with optional insets.").size(14),
             Text::h2("Type"),
             Divider::horizontal(),
-            Divider::horizontal().inset(iced_ui::Space::sx(4.0)),
+            Divider::horizontal().inset(iced_ui::Space::sx(2.0)),
             Text::h2("Axis"),
             Divider::horizontal(),
             row![

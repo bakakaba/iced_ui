@@ -8,6 +8,7 @@ mod dialog;
 mod divider;
 mod fab;
 mod icon_button;
+mod inputs;
 mod list;
 mod menu;
 mod navigation_bar;
@@ -134,6 +135,7 @@ pages! {
         Divider(divider::DividerPage),
         Fab(fab::FabPage),
         IconButton(icon_button::IconButtonPage),
+        Inputs(inputs::InputsPage),
         List(list::ListPage),
         Menu(menu::MenuPage),
         NavigationBar(navigation_bar::NavigationBarPage),

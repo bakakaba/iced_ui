@@ -100,11 +100,11 @@ pub fn default(theme: &Theme) -> Style {
             width: 0.0,
             color: Color::TRANSPARENT,
         },
-        item_radius: theme.radius(Roundness::sx(2.0)),
+        item_radius: theme.radius(Roundness::sx(1.0)),
 
         menu_background: palette.background.base.color.into(),
         menu_border: Border {
-            radius: theme.radius(Roundness::sx(2.0)).into(),
+            radius: theme.radius(Roundness::sx(1.0)).into(),
             width: 1.0,
             color: palette.background.strong.color,
         },
@@ -126,6 +126,6 @@ pub fn default(theme: &Theme) -> Style {
         check_glyph: '\u{2713}',
         check_color: palette.primary.base.color,
 
-        spacing: theme.space(Space::sx(2.0)),
+        spacing: theme.space(Space::sx(1.0)),
     }
 }

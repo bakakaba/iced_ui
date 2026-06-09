@@ -31,11 +31,13 @@ pub mod native;
 pub mod navigation_bar;
 pub mod navigation_drawer;
 pub mod navigation_rail;
+pub mod number_input;
 pub mod screen;
 pub mod segmented_button;
 pub mod snackbar;
 pub mod tabs;
 pub mod text;
+pub mod text_input;
 pub mod theme;
 pub mod top_app_bar;
 
@@ -57,11 +59,13 @@ pub use native::native;
 pub use navigation_bar::NavigationBar;
 pub use navigation_drawer::NavigationDrawer;
 pub use navigation_rail::NavigationRail;
+pub use number_input::NumberInput;
 pub use screen::Screen;
 pub use segmented_button::{Segment, SegmentedButton};
 pub use snackbar::Snackbar;
 pub use tabs::Tabs;
 pub use text::Text;
+pub use text_input::TextInput;
 pub use theme::{
     FontSize, FontSizeBase, Information, PaddingSource, Paper, Roundness, RoundnessBase, Space,
     SpacingBase, Theme,

@@ -94,10 +94,10 @@ pub struct Theme {
 
 impl Theme {
     /// The default base unit for spacing tokens.
-    pub const DEFAULT_SPACING: u8 = 4;
+    pub const DEFAULT_SPACING: u8 = 8;
 
     /// The default base unit for roundness tokens.
-    pub const DEFAULT_ROUNDNESS: u8 = 4;
+    pub const DEFAULT_ROUNDNESS: u8 = 8;
 
     /// The default base text size — matches iced's built-in
     /// [`Settings::default_text_size`](iced::Settings::default_text_size).

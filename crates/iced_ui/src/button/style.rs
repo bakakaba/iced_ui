@@ -193,7 +193,7 @@ pub fn default(
     status: Status,
 ) -> Style {
     let palette = theme.extended_palette();
-    let radius = theme.radius(Roundness::sx(2.0));
+    let radius = theme.radius(Roundness::sx(1.0));
 
     // Resolve the color token to a concrete color and its readable
     // contrast (for use as text on a solid background).

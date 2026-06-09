@@ -1,5 +1,5 @@
 use iced::theme::Palette;
-use iced::widget::{Space, checkbox, column, container, pick_list, row, scrollable, slider, text};
+use iced::widget::{Space, checkbox, column, container, pick_list, row, scrollable, text};
 use iced::{Color, Length, Subscription, Task};
 
 use iced_ui::Theme;
@@ -8,6 +8,7 @@ use iced_ui::color_picker::ColorPicker;
 use iced_ui::dialog::Dialog;
 use iced_ui::list;
 use iced_ui::menu::{Icon, Item, KeyBinding, Menu, MenuBar, Separator};
+use iced_ui::number_input::NumberInput;
 use iced_ui::text::Text;
 use iced_ui::theme::tokens::Information;
 
@@ -85,6 +86,9 @@ impl Demo {
             }
             Message::SpacingChanged(value) => {
                 self.theme.spacing = value;
+            }
+            Message::TextSizeChanged(value) => {
+                self.theme.text_size = f32::from(value);
             }
             Message::Navigate(page) => {
                 self.active_page = ActivePage::navigate(page);
@@ -244,45 +248,47 @@ fn build_settings_pane(demo: &Demo) -> Element<'_, Message> {
         content = content.push(information_color_row(demo.information_color));
     }
 
-    content = content.push(base_slider(
-        "Roundness",
-        demo.theme.roundness,
-        0..=24,
-        Message::RoundnessChanged,
-    ));
-    content = content.push(base_slider(
-        "Spacing",
-        demo.theme.spacing,
-        0..=24,
-        Message::SpacingChanged,
-    ));
+    content = content.push(
+        column![
+            text("Roundness").size(14),
+            NumberInput::new(demo.theme.roundness)
+                .on_change(Message::RoundnessChanged)
+                .range(0..=24)
+                .step(1)
+                .width(Length::Fill),
+        ]
+        .spacing(4),
+    );
+    content = content.push(
+        column![
+            text("Spacing").size(14),
+            NumberInput::new(demo.theme.spacing)
+                .on_change(Message::SpacingChanged)
+                .range(0..=24)
+                .step(1)
+                .width(Length::Fill),
+        ]
+        .spacing(4),
+    );
+    content = content.push(
+        column![
+            text("Text Size").size(14),
+            NumberInput::new(demo.theme.text_size as u8)
+                .on_change(Message::TextSizeChanged)
+                .range(8..=48)
+                .step(1)
+                .width(Length::Fill),
+        ]
+        .spacing(4),
+    );
 
     let pane = Card::new(scrollable(content.padding(4)))
         .width(Length::Fixed(260.0))
         .height(Length::Fill)
-        .padding(iced_ui::Space::sx(4.0))
+        .padding(iced_ui::Space::sx(2.0))
         .elevated();
 
     container(pane).padding(12).into()
-}
-
-fn base_slider<'a>(
-    label: &'a str,
-    value: u8,
-    range: std::ops::RangeInclusive<u8>,
-    on_change: impl Fn(u8) -> Message + 'a,
-) -> Element<'a, Message> {
-    column![
-        row![
-            text(label).size(14),
-            Space::new().width(Length::Fill),
-            text(format!("{value}")).size(12),
-        ]
-        .align_y(iced::Alignment::Center),
-        slider(range, value, on_change),
-    ]
-    .spacing(4)
-    .into()
 }
 
 fn palette_field_row<'a>(field: PaletteField, palette: Palette) -> Element<'a, Message> {

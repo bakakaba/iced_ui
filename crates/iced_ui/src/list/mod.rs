@@ -148,8 +148,8 @@ where
             items: Vec::new(),
             width: Length::Fill,
             height: Length::Shrink,
-            padding: PaddingSource::from(Space::sx(2.0)),
-            item_padding: PaddingSource::from(Space::sx(2.0)),
+            padding: PaddingSource::from(Space::sx(1.0)),
+            item_padding: PaddingSource::from(Space::sx(1.0)),
             spacing: Space::sx(0.0),
             class: <Theme as Catalog>::default(),
             _renderer: PhantomData,
@@ -175,14 +175,14 @@ where
     }
 
     /// Sets the outer padding of the [`List`]. Defaults to
-    /// [`Space::sx(2.0)`].
+    /// [`Space::sx(1.0)`].
     pub fn padding(mut self, padding: impl Into<PaddingSource>) -> Self {
         self.padding = padding.into();
         self
     }
 
     /// Sets the inner padding of each item row. Defaults to
-    /// [`Space::sx(2.0)`].
+    /// [`Space::sx(1.0)`].
     pub fn item_padding(mut self, padding: impl Into<PaddingSource>) -> Self {
         self.item_padding = padding.into();
         self
