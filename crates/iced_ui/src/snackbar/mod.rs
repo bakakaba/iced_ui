@@ -242,15 +242,35 @@ where
             );
         }
 
-        Some(overlay::Element::new(Box::new(SnackbarOverlay {
+        // Split borrows: `state` and `children` are separate fields of Tree.
+        let Tree {
+            state, children, ..
+        } = tree;
+
+        let host_overlay = self.host.as_widget_mut().overlay(
+            &mut children[0],
+            layout,
+            renderer,
+            viewport,
+            translation,
+        );
+
+        let snackbar_overlay = overlay::Element::new(Box::new(SnackbarOverlay {
             message_text: self.message_text.as_deref(),
             action: self.action.as_ref(),
             on_dismiss: self.on_dismiss.as_ref(),
-            state: tree.state.downcast_mut(),
+            state: state.downcast_mut(),
             style_fn: &self.class,
             viewport: *viewport,
             _renderer: std::marker::PhantomData,
-        })))
+        }));
+
+        match host_overlay {
+            Some(host) => {
+                Some(overlay::Group::with_children(vec![host, snackbar_overlay]).overlay())
+            }
+            None => Some(snackbar_overlay),
+        }
     }
 }
 
