@@ -49,7 +49,7 @@ impl Catalog for Theme {
 /// Default theme
 pub fn default(theme: &Theme) -> Style {
     let palette = theme.extended_palette();
-    let radius = theme.radius(Roundness::sx(7.0));
+    let radius = theme.radius(Roundness::sx(4.0));
 
     Style {
         background: Background::Color(palette.background.base.color),

@@ -4,6 +4,10 @@
 //! `true`, a sheet panel is rendered at the bottom via the overlay
 //! system. Optionally a scrim covers the host when `modal` is `true`.
 //!
+//! The drag handle (enabled by default) allows the user to resize the
+//! sheet by dragging vertically. Dragging below the minimum height
+//! fraction (default 10%) dismisses the sheet.
+//!
 //! # Example
 //!
 //! ```ignore
@@ -13,6 +17,7 @@
 //!     .modal(true)
 //!     .expanded(self.sheet_expanded)
 //!     .on_dismiss(Message::CloseSheet)
+//!     .on_resize(Message::SheetResized)
 //!     .drag_handle(true);
 //! ```
 
@@ -27,7 +32,7 @@ use iced::advanced::text::{self, Text};
 use iced::advanced::widget::{Operation, Tree, Widget, tree};
 use iced::advanced::{Clipboard, Shell};
 use iced::mouse;
-use iced::{Element, Event, Length, Pixels, Point, Rectangle, Size, Vector};
+use iced::{Color, Element, Event, Length, Pixels, Point, Rectangle, Size, Vector};
 
 use crate::{FontSizeBase, RoundnessBase, SpacingBase};
 
@@ -39,9 +44,13 @@ const HANDLE_HEIGHT: f32 = 4.0;
 const HANDLE_VERTICAL_PADDING: f32 = 12.0;
 /// Inner padding for sheet content.
 const SHEET_PADDING: f32 = 24.0;
+/// Height of the hit zone for grabbing the drag handle.
+const HANDLE_HIT_HEIGHT: f32 = HANDLE_HEIGHT + HANDLE_VERTICAL_PADDING * 2.0;
+/// Default minimum height fraction; below this the sheet will dismiss.
+const DEFAULT_MIN_HEIGHT_FRACTION: f32 = 0.1;
 
 /// Wraps host content and conditionally displays a sheet panel from
-/// the bottom of the viewport.
+/// the bottom of its bounds.
 pub struct BottomSheet<'a, Message, Theme = crate::Theme, Renderer = iced::Renderer>
 where
     Theme: Catalog,
@@ -52,8 +61,10 @@ where
     modal: bool,
     expanded: bool,
     on_dismiss: Option<Message>,
+    on_resize: Option<Box<dyn Fn(f32) -> Message + 'a>>,
     drag_handle: bool,
     height_fraction: f32,
+    min_height_fraction: f32,
     class: Theme::Class<'a>,
 }
 
@@ -74,8 +85,10 @@ where
             modal: false,
             expanded: false,
             on_dismiss: None,
+            on_resize: None,
             drag_handle: true,
             height_fraction: 0.5,
+            min_height_fraction: DEFAULT_MIN_HEIGHT_FRACTION,
             class: Theme::default(),
         }
     }
@@ -92,9 +105,18 @@ where
         self
     }
 
-    /// Sets the message emitted when the scrim is pressed to dismiss.
+    /// Sets the message emitted when the scrim is pressed to dismiss,
+    /// or when the sheet is dragged below the minimum height.
     pub fn on_dismiss(mut self, msg: Message) -> Self {
         self.on_dismiss = Some(msg);
+        self
+    }
+
+    /// Sets a callback invoked with the new height fraction when the
+    /// user finishes resizing the sheet via the drag handle. Optional;
+    /// drag-to-resize works regardless of whether this is set.
+    pub fn on_resize(mut self, f: impl Fn(f32) -> Message + 'a) -> Self {
+        self.on_resize = Some(Box::new(f));
         self
     }
 
@@ -104,10 +126,17 @@ where
         self
     }
 
-    /// Sets the sheet height as a fraction of the viewport (0.0–1.0).
+    /// Sets the sheet height as a fraction of the host (0.0–1.0).
     /// Defaults to 0.5 (50%).
     pub fn height_fraction(mut self, fraction: f32) -> Self {
         self.height_fraction = fraction.clamp(0.1, 1.0);
+        self
+    }
+
+    /// Sets the minimum height fraction before the sheet dismisses.
+    /// Defaults to 0.1 (10%). Must be in range (0.0, 1.0).
+    pub fn min_height_fraction(mut self, fraction: f32) -> Self {
+        self.min_height_fraction = fraction.clamp(0.01, 0.99);
         self
     }
 
@@ -122,6 +151,14 @@ where
 #[derive(Debug, Default)]
 struct SheetState {
     scrim_pressed: bool,
+    /// Whether the user is currently dragging the handle.
+    dragging: bool,
+    /// The absolute Y coordinate where the drag started.
+    drag_start_y: f32,
+    /// The height fraction at the moment the drag started.
+    drag_start_fraction: f32,
+    /// Live height fraction override while dragging (or after drag).
+    height_override: Option<f32>,
 }
 
 impl<'a, Message, Theme, Renderer> Widget<Message, Theme, Renderer>
@@ -246,7 +283,7 @@ where
         tree: &'b mut Tree,
         layout: Layout<'b>,
         renderer: &Renderer,
-        viewport: &Rectangle,
+        _viewport: &Rectangle,
         translation: Vector,
     ) -> Option<overlay::Element<'b, Message, Theme, Renderer>> {
         if !self.expanded {
@@ -254,20 +291,28 @@ where
                 &mut tree.children[0],
                 layout,
                 renderer,
-                viewport,
+                _viewport,
                 translation,
             );
         }
+
+        // Compute the host's absolute on-screen bounds, accounting for
+        // any scroll offset via the translation vector.
+        let mut host_bounds = layout.bounds();
+        host_bounds.x += translation.x;
+        host_bounds.y += translation.y;
 
         Some(overlay::Element::new(Box::new(SheetOverlay {
             sheet_body: &self.sheet_body,
             modal: self.modal,
             on_dismiss: self.on_dismiss.as_ref(),
+            on_resize: self.on_resize.as_deref(),
             drag_handle: self.drag_handle,
             height_fraction: self.height_fraction,
+            min_height_fraction: self.min_height_fraction,
             state: tree.state.downcast_mut(),
             style_fn: &self.class,
-            viewport: *viewport,
+            host_bounds,
             _renderer: std::marker::PhantomData,
         })))
     }
@@ -282,12 +327,39 @@ where
     sheet_body: &'b str,
     modal: bool,
     on_dismiss: Option<&'b Message>,
+    on_resize: Option<&'b (dyn Fn(f32) -> Message + 'a)>,
     drag_handle: bool,
     height_fraction: f32,
+    min_height_fraction: f32,
     state: &'b mut SheetState,
     style_fn: &'b <Theme as Catalog>::Class<'a>,
-    viewport: Rectangle,
+    host_bounds: Rectangle,
     _renderer: std::marker::PhantomData<Renderer>,
+}
+
+impl<'a, Message, Theme, Renderer> SheetOverlay<'a, '_, Message, Theme, Renderer>
+where
+    Theme: Catalog,
+    Renderer: renderer::Renderer,
+{
+    /// Returns the effective height fraction, preferring the live drag
+    /// override when active.
+    fn effective_fraction(&self) -> f32 {
+        self.state
+            .height_override
+            .unwrap_or(self.height_fraction)
+            .clamp(0.0, 1.0)
+    }
+
+    /// Computes the handle hit zone rectangle given the sheet bounds.
+    fn handle_hit_rect(sheet_bounds: &Rectangle) -> Rectangle {
+        Rectangle {
+            x: sheet_bounds.x,
+            y: sheet_bounds.y,
+            width: sheet_bounds.width,
+            height: HANDLE_HIT_HEIGHT,
+        }
+    }
 }
 
 impl<Message, Theme, Renderer> overlay::Overlay<Message, Theme, Renderer>
@@ -298,15 +370,19 @@ where
     Renderer: renderer::Renderer + text::Renderer,
 {
     fn layout(&mut self, _renderer: &Renderer, _bounds: Size) -> layout::Node {
-        let viewport_size = self.viewport.size();
+        let host = self.host_bounds;
+        let fraction = self.effective_fraction();
 
-        let sheet_height = (viewport_size.height * self.height_fraction).min(viewport_size.height);
-        let sheet_y = viewport_size.height - sheet_height;
+        let sheet_height = (host.height * fraction).max(0.0).min(host.height);
+        let sheet_y = host.height - sheet_height;
 
-        let sheet_node = layout::Node::new(Size::new(viewport_size.width, sheet_height))
+        // Sheet child node — position is relative to root node.
+        let sheet_node = layout::Node::new(Size::new(host.width, sheet_height))
             .move_to(Point::new(0.0, sheet_y));
 
-        layout::Node::with_children(viewport_size, vec![sheet_node])
+        // Root node covers the host area at its absolute position.
+        layout::Node::with_children(Size::new(host.width, host.height), vec![sheet_node])
+            .move_to(Point::new(host.x, host.y))
     }
 
     fn draw(
@@ -319,6 +395,7 @@ where
     ) {
         let sheet_style = <Theme as Catalog>::style(theme, self.style_fn);
         let bounds = layout.bounds();
+        let fraction = self.effective_fraction();
 
         // Scrim (if modal)
         if self.modal {
@@ -335,6 +412,32 @@ where
         let sheet_layout = layout.children().next().unwrap();
         let sheet_bounds = sheet_layout.bounds();
 
+        // Compute dismiss fade: when fraction is below minimum, fade
+        // out the sheet to indicate impending dismissal.
+        let dismiss_alpha = if fraction < self.min_height_fraction {
+            // Linear fade from 1.0 (at min) to 0.0 (at 0)
+            (fraction / self.min_height_fraction).clamp(0.0, 1.0)
+        } else {
+            1.0
+        };
+
+        // Apply dismiss alpha to the background color
+        let bg_color = match sheet_style.background {
+            iced::Background::Color(c) => Color {
+                a: c.a * dismiss_alpha,
+                ..c
+            },
+            other => match other {
+                iced::Background::Color(c) => Color {
+                    a: c.a * dismiss_alpha,
+                    ..c
+                },
+                // Gradient backgrounds cannot have alpha easily modified;
+                // fall back to the original.
+                _ => Color::TRANSPARENT,
+            },
+        };
+
         renderer.fill_quad(
             renderer::Quad {
                 bounds: sheet_bounds,
@@ -342,7 +445,7 @@ where
                 shadow: sheet_style.shadow,
                 ..renderer::Quad::default()
             },
-            sheet_style.background,
+            iced::Background::Color(bg_color),
         );
 
         let mut y_cursor = sheet_bounds.y;
@@ -351,6 +454,11 @@ where
         if self.drag_handle {
             y_cursor += HANDLE_VERTICAL_PADDING;
             let handle_x = sheet_bounds.x + (sheet_bounds.width - HANDLE_WIDTH) / 2.0;
+
+            let handle_color = Color {
+                a: sheet_style.handle_color.a * dismiss_alpha,
+                ..sheet_style.handle_color
+            };
 
             renderer.fill_quad(
                 renderer::Quad {
@@ -366,7 +474,7 @@ where
                     },
                     ..renderer::Quad::default()
                 },
-                iced::Background::Color(sheet_style.handle_color),
+                iced::Background::Color(handle_color),
             );
 
             y_cursor += HANDLE_HEIGHT + HANDLE_VERTICAL_PADDING;
@@ -378,6 +486,11 @@ where
         let text_x = sheet_bounds.x + SHEET_PADDING;
         let text_width = sheet_bounds.width - SHEET_PADDING * 2.0;
         let text_height = sheet_bounds.height - (y_cursor - sheet_bounds.y) - SHEET_PADDING;
+
+        let text_color = Color {
+            a: sheet_style.handle_color.a * dismiss_alpha,
+            ..sheet_style.handle_color
+        };
 
         renderer.fill_text(
             Text {
@@ -392,7 +505,7 @@ where
                 wrapping: text::Wrapping::WordOrGlyph,
             },
             Point::new(text_x, y_cursor),
-            sheet_style.handle_color, // reuse handle color for text (on-surface)
+            text_color,
             sheet_bounds,
         );
     }
@@ -413,13 +526,73 @@ where
         let is_over_sheet = cursor.is_over(sheet_bounds);
         let is_over_scrim = cursor.is_over(bounds) && !is_over_sheet;
 
+        let handle_hit = if self.drag_handle {
+            let hit_rect = Self::handle_hit_rect(&sheet_bounds);
+            cursor.is_over(hit_rect)
+        } else {
+            false
+        };
+
         match event {
+            // --- Drag handle interaction ---
             Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left))
-                if is_over_scrim && self.modal =>
+                if handle_hit && self.drag_handle =>
+            {
+                if let Some(pos) = cursor.position() {
+                    self.state.dragging = true;
+                    self.state.drag_start_y = pos.y;
+                    self.state.drag_start_fraction = self.effective_fraction();
+                    shell.capture_event();
+                }
+            }
+
+            Event::Mouse(mouse::Event::CursorMoved { .. }) if self.state.dragging => {
+                if let Some(pos) = cursor.position() {
+                    let host_height = self.host_bounds.height;
+                    if host_height > 0.0 {
+                        let delta_y = pos.y - self.state.drag_start_y;
+                        // Dragging down shrinks the sheet
+                        let new_fraction = self.state.drag_start_fraction - (delta_y / host_height);
+                        self.state.height_override = Some(new_fraction.clamp(0.0, 1.0));
+                        shell.request_redraw();
+                    }
+                    shell.capture_event();
+                }
+            }
+
+            Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left))
+                if self.state.dragging =>
+            {
+                self.state.dragging = false;
+                let final_fraction = self.effective_fraction();
+
+                if final_fraction < self.min_height_fraction {
+                    // Dismiss the sheet
+                    self.state.height_override = None;
+                    if let Some(msg) = self.on_dismiss {
+                        shell.publish(msg.clone());
+                    }
+                } else {
+                    // Publish the final fraction via on_resize
+                    if let Some(on_resize) = self.on_resize {
+                        shell.publish(on_resize(final_fraction));
+                    }
+                    self.state.height_override = None;
+                }
+
+                shell.capture_event();
+            }
+
+            // --- Scrim dismiss interaction ---
+            Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left))
+                if is_over_scrim && self.modal && !self.state.dragging =>
             {
                 self.state.scrim_pressed = true;
             }
-            Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left)) => {
+
+            Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left))
+                if !self.state.dragging =>
+            {
                 if self.state.scrim_pressed
                     && is_over_scrim
                     && let Some(msg) = self.on_dismiss
@@ -428,6 +601,7 @@ where
                 }
                 self.state.scrim_pressed = false;
             }
+
             _ => {}
         }
     }
@@ -438,8 +612,19 @@ where
         cursor: mouse::Cursor,
         _renderer: &Renderer,
     ) -> mouse::Interaction {
+        if self.state.dragging {
+            return mouse::Interaction::ResizingVertically;
+        }
+
         let sheet_layout = layout.children().next().unwrap();
         let sheet_bounds = sheet_layout.bounds();
+
+        if self.drag_handle {
+            let hit_rect = Self::handle_hit_rect(&sheet_bounds);
+            if cursor.is_over(hit_rect) {
+                return mouse::Interaction::ResizingVertically;
+            }
+        }
 
         if cursor.is_over(sheet_bounds) {
             mouse::Interaction::default()
