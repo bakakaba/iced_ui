@@ -5,7 +5,7 @@ use iced::widget::{center, column, row, text};
 use iced_ui::button::Button;
 use iced_ui::position::Position;
 use iced_ui::screen::Screen;
-use iced_ui::snackbar::{Severity, Snackbar};
+use iced_ui::snackbar::{Notification, NotificationId, Notifications, Severity, Snackbar};
 use iced_ui::text::Text;
 
 use crate::Element;
@@ -13,19 +13,33 @@ use crate::state::ActionLog;
 
 #[derive(Debug, Clone)]
 pub(crate) enum Msg {
+    // Anchor
     ShowAnchor(Position),
-    HideAnchor,
+    DismissAnchor(NotificationId),
+    // Severity
     ShowSeverity(Severity),
-    HideSeverity,
+    DismissSeverity(NotificationId),
+    // Auto dismiss
     ShowAutoDismiss,
-    HideAutoDismiss,
+    DismissAuto(NotificationId),
 }
 
-#[derive(Default)]
 pub(crate) struct SnackbarPage {
-    anchor: Option<Position>,
-    severity: Option<Severity>,
-    auto_dismiss_visible: bool,
+    anchor_notifications: Notifications,
+    anchor_pos: Position,
+    severity_notifications: Notifications,
+    auto_notifications: Notifications,
+}
+
+impl Default for SnackbarPage {
+    fn default() -> Self {
+        Self {
+            anchor_notifications: Notifications::new(),
+            anchor_pos: Position::BottomRight,
+            severity_notifications: Notifications::new(),
+            auto_notifications: Notifications::new(),
+        }
+    }
 }
 
 impl super::PageView for SnackbarPage {
@@ -34,12 +48,37 @@ impl super::PageView for SnackbarPage {
 
     fn update(&mut self, msg: Msg) -> super::Action {
         match msg {
-            Msg::ShowAnchor(pos) => self.anchor = Some(pos),
-            Msg::HideAnchor => self.anchor = None,
-            Msg::ShowSeverity(sev) => self.severity = Some(sev),
-            Msg::HideSeverity => self.severity = None,
-            Msg::ShowAutoDismiss => self.auto_dismiss_visible = true,
-            Msg::HideAutoDismiss => self.auto_dismiss_visible = false,
+            Msg::ShowAnchor(pos) => {
+                self.anchor_pos = pos;
+                self.anchor_notifications
+                    .push(Notification::new("Anchored here."));
+            }
+            Msg::DismissAnchor(id) => {
+                self.anchor_notifications.dismiss(&id);
+            }
+            Msg::ShowSeverity(sev) => {
+                let msg = match sev {
+                    Severity::Neutral => "Notification.",
+                    Severity::Information => "This is an informational message.",
+                    Severity::Success => "Operation completed successfully.",
+                    Severity::Warning => "Please review before continuing.",
+                    Severity::Error => "Something went wrong.",
+                };
+                self.severity_notifications
+                    .push(Notification::new(msg).severity(sev));
+            }
+            Msg::DismissSeverity(id) => {
+                self.severity_notifications.dismiss(&id);
+            }
+            Msg::ShowAutoDismiss => {
+                self.auto_notifications.push(
+                    Notification::new("Auto-dismisses in 5 seconds.")
+                        .auto_dismiss(Duration::from_secs(5)),
+                );
+            }
+            Msg::DismissAuto(id) => {
+                self.auto_notifications.dismiss(&id);
+            }
         }
         super::Action::None
     }
@@ -71,12 +110,10 @@ impl super::PageView for SnackbarPage {
         .width(400)
         .into();
 
-        let anchor_pos = self.anchor.unwrap_or(Position::BottomRight);
         let anchor_snackbar = Snackbar::new(center(anchor_buttons))
-            .message("Anchored here.")
-            .on_dismiss(Msg::HideAnchor)
-            .anchor(anchor_pos)
-            .visible(self.anchor.is_some());
+            .notifications(&self.anchor_notifications)
+            .on_dismiss(Msg::DismissAnchor)
+            .anchor(self.anchor_pos);
 
         // -- Severity section --
         let severity_btn = |label: &'static str, sev: Severity| -> Element<'_, Msg> {
@@ -94,27 +131,15 @@ impl super::PageView for SnackbarPage {
         .spacing(8)
         .into();
 
-        let sev = self.severity.unwrap_or(Severity::Neutral);
-        let sev_msg = match sev {
-            Severity::Neutral => "Notification.",
-            Severity::Information => "This is an informational message.",
-            Severity::Success => "Operation completed successfully.",
-            Severity::Warning => "Please review before continuing.",
-            Severity::Error => "Something went wrong.",
-        };
         let severity_snackbar = Snackbar::new(center(severity_buttons))
-            .message(sev_msg)
-            .on_dismiss(Msg::HideSeverity)
-            .severity(sev)
-            .visible(self.severity.is_some());
+            .notifications(&self.severity_notifications)
+            .on_dismiss(Msg::DismissSeverity);
 
         // -- Auto dismiss section --
         let auto_host = center(Button::new(text("Show (5s)")).on_press(Msg::ShowAutoDismiss));
         let auto_snackbar = Snackbar::new(auto_host)
-            .message("Auto-dismisses in 5 seconds.")
-            .on_dismiss(Msg::HideAutoDismiss)
-            .auto_dismiss(Duration::from_secs(5))
-            .visible(self.auto_dismiss_visible);
+            .notifications(&self.auto_notifications)
+            .on_dismiss(Msg::DismissAuto);
 
         column![
             Text::h1("Snackbar"),

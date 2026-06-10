@@ -294,6 +294,128 @@ Specific guidance for the components that live in this library crate:
 
 ---
 
+## 5. Overlay Implementation
+
+Guidance for widgets that render floating content via `Widget::overlay()`.
+
+### CRITICAL
+
+- **Position overlays relative to host bounds, not the viewport.**
+  `Widget::overlay()` receives `viewport` but that's the full window.
+  Compute host bounds from `layout.bounds() + translation`:
+
+  ```rust
+  fn overlay<'b>(&'b mut self, tree, layout, renderer, viewport, translation) {
+      let mut host_bounds = layout.bounds();
+      host_bounds.x += translation.x;
+      host_bounds.y += translation.y;
+      // Pass host_bounds to your overlay struct
+  }
+  ```
+
+  In the overlay's `layout()`, position the root node at the host's
+  absolute position and size it to host dimensions (or smaller). Child
+  nodes use positions relative to the root.
+
+- **Size overlay root to only the interactive region.** If the overlay
+  root covers the full host area, iced's runtime checks
+  `mouse_interaction()` against those bounds and may block cursor
+  pass-through to the widget tree underneath. Size the root to tightly
+  wrap only the rendered overlay content (e.g., notification bars, menu
+  panels, tooltip bubbles). This ensures clicks outside the overlay
+  reach the host's interactive widgets.
+
+- **Recompute hover state on `ButtonPressed`, not just `CursorMoved`.**
+  After layout shifts (items added/removed between frames), cached
+  hover state (which ID is "hovered") becomes stale — it references
+  positions/IDs from the previous layout. Always recalculate what's
+  under the cursor when a click starts:
+
+  ```rust
+  Event::Mouse(mouse::Event::CursorMoved { .. })
+  | Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) => {
+      // Recompute hover from cursor + current layout on BOTH events.
+      self.update_hover(cursor, &layouts);
+
+      if matches!(event, Event::Mouse(mouse::Event::ButtonPressed(_))) {
+          self.pressed = self.hovered.clone();
+      }
+  }
+  ```
+
+  Without this, rapidly clicking after a dismiss (which shifts the
+  layout) fires events for the wrong target or doesn't fire at all.
+
+### HIGH
+
+- **Theme values are unavailable in `Overlay::layout()`.** The
+  `Overlay::layout(&mut self, renderer, bounds)` signature has no
+  `theme` parameter. Use `Cell<T>` in the widget's tree state to cache
+  theme-derived values. Update in `Overlay::draw()` (which receives
+  the theme via `&self`), read in `Overlay::layout()` (via `&mut self`
+  access to state). Initialize with `Theme::DEFAULT_*` constants for
+  the first-frame fallback.
+
+  ```rust
+  // In SnackbarState:
+  spacing: Cell<u8>,  // initialized to Theme::DEFAULT_SPACING
+
+  // In Overlay::draw():
+  self.state.spacing.set(theme.spacing());
+
+  // In Overlay::layout():
+  let margin = Space::sx(2.0).resolve(self.state.spacing.get());
+  ```
+
+- **`overlay::Group` does not short-circuit events.** All children in a
+  group receive every event via `Group::update()`. Only
+  `shell.capture_event()` prevents propagation to the base widget tree
+  — group children cannot block each other.
+
+- **Overlay `mouse_interaction()` controls cursor pass-through.** Return
+  `Interaction::None` when the cursor is not over any interactive
+  overlay element. If you return non-`None`, the iced runtime sets
+  `base_cursor = Cursor::Unavailable` for the widget tree, and
+  interactive widgets underneath (buttons, inputs) won't respond to
+  that event.
+
+### MEDIUM
+
+- **Clean up stale state when the overlay's data changes.** If the
+  overlay tracks per-item state (timers, hover flags keyed by ID),
+  remove entries for items no longer present in the data. Otherwise
+  stale entries accumulate and may cause ID mismatches.
+
+- **Use `shell.request_redraw()` for animated overlays.** Auto-dismiss
+  countdowns, progress indicators, or any time-varying content needs
+  explicit redraw requests — iced won't repaint without state changes.
+
+### Frame Lifecycle Reference
+
+Within a single frame in `user_interface.rs`:
+
+1. `Widget::overlay()` — collect overlay elements from widget tree
+2. `Overlay::layout()` — compute overlay positioning
+3. For each event in batch: `Overlay::update()` → check `event_status`
+4. `Overlay::mouse_interaction()` — determines `base_cursor` for widget tree
+5. For each non-captured event: `Widget::update()` (receives `base_cursor`)
+6. `Overlay::draw()` + `Widget::draw()` — render
+
+Messages are collected during steps 3 + 5 and processed **after** the
+frame completes. The app's `update()` runs, then `view()` rebuilds the
+widget tree for the next frame.
+
+Key implications:
+- Overlays see events **before** the widget tree.
+- `shell.capture_event()` in overlay prevents the widget tree from
+  receiving that specific event.
+- `mouse_interaction() != None` makes cursor unavailable to widgets.
+- `Overlay::draw()` runs on the same frame as `Overlay::layout()` —
+  values written to state in `draw()` are available in `layout()` on
+  the **next** frame only.
+
+---
+
 ## Review Checklist
 
 When reviewing a change that touches iced code, walk this list:
@@ -314,3 +436,9 @@ When reviewing a change that touches iced code, walk this list:
    Is `tag()` distinguishing the widget type? (CRITICAL)
 9. Are `Message` variants carrying large cloned payloads?
    → Use IDs/indices instead. (MEDIUM)
+10. For overlay widgets: is the overlay positioned relative to host bounds
+    (not viewport)? Is the root node sized minimally? (CRITICAL)
+11. Does the overlay's `mouse_interaction()` return `None` when the cursor
+    is not over an interactive overlay element? (CRITICAL)
+12. Does the overlay recompute hover state on `ButtonPressed` (not just
+    `CursorMoved`) to handle layout shifts between frames? (CRITICAL)

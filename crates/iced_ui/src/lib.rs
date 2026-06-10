@@ -66,7 +66,7 @@ pub use position::Position;
 pub use screen::Screen;
 pub use segmented_button::{Segment, SegmentedButton};
 pub use slide_sheet::SlideSheet;
-pub use snackbar::Snackbar;
+pub use snackbar::{Notification, NotificationId, Notifications, Snackbar};
 pub use tabs::Tabs;
 pub use text::Text;
 pub use text_input::TextInput;
