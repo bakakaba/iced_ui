@@ -26,7 +26,7 @@
 //! use iced_ui::{Space, Theme};
 //!
 //! let mut theme = Theme::default();
-//! assert_eq!(theme.space(Space::sx(2.0)), 8.0);
+//! assert_eq!(theme.space(Space::sx(2.0)), 16.0);
 //!
 //! // Density rescale: bump the base, every factor follows.
 //! theme.spacing = 6;
@@ -59,7 +59,7 @@ use iced::theme::palette;
 ///
 /// All fields are public so application code can tweak them
 /// directly. Construct one with [`Theme::default`] (Dark colors,
-/// `spacing = 4`, `roundness = 4`, `text_size = 16.0`) or by
+/// `spacing = 8`, `roundness = 8`, `text_size = 16.0`) or by
 /// setting fields explicitly.
 ///
 /// [`Space::sx(f)`]: scale::Space::sx

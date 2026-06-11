@@ -88,6 +88,11 @@ pub fn theme() -> Theme {
 ///   `Family::SansSerif` requests resolve to the bundled family
 ///   (matching both the regular face shipped by `iced_test` and the
 ///   bold face bundled here).
+/// - Loads the Lucide icon font so widgets that render icon glyphs
+///   via [`iced_ui::icons::FONT`] (e.g. the snackbar's severity and
+///   dismiss icons) resolve to real glyphs instead of a host
+///   fallback. This mirrors what the demo app does via
+///   `iced::application(...).font(FONT_BYTES)`.
 fn init_font_system() {
     static INIT: Once = Once::new();
 
@@ -105,6 +110,10 @@ fn init_font_system() {
         // Load the bundled bold face so requests for Fira Sans Bold
         // succeed against an in-memory, deterministic file.
         system.load_font(std::borrow::Cow::Borrowed(FIRA_SANS_BOLD));
+
+        // Load the Lucide icon font so icon glyphs render
+        // deterministically (the demo app loads this at startup).
+        system.load_font(std::borrow::Cow::Borrowed(iced_ui::icons::FONT_BYTES));
     });
 }
 
