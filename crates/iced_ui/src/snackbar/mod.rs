@@ -85,14 +85,14 @@ const MAX_BAR_WIDTH: f32 = 560.0;
 const DISMISS_WIDTH: f32 = 36.0;
 
 /// Returns the close icon content and font.
-#[cfg(feature = "lucide")]
+#[cfg(feature = "lucide-icons")]
 fn close_icon() -> (String, iced::Font) {
     use crate::icons::FONT;
     (char::from(lucide_icons::Icon::X).to_string(), FONT)
 }
 
 /// Returns the close icon content and font (Unicode fallback).
-#[cfg(not(feature = "lucide"))]
+#[cfg(not(feature = "lucide-icons"))]
 fn close_icon() -> (String, iced::Font) {
     ("\u{00D7}".to_string(), iced::Font::default())
 }

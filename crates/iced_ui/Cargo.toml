@@ -13,7 +13,7 @@ svg = ["iced/svg"]
 image = ["iced/image"]
 qr_code = ["iced/qr_code"]
 markdown = ["iced/markdown"]
-lucide = ["dep:lucide-icons"]
+lucide-icons = ["dep:lucide-icons"]
 
 [dependencies]
 iced = { version = "0.14", features = ["advanced"] }

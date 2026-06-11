@@ -24,7 +24,7 @@ pub mod dialog;
 pub mod divider;
 pub mod fab;
 pub mod icon_button;
-#[cfg(feature = "lucide")]
+#[cfg(feature = "lucide-icons")]
 pub mod icons;
 pub mod list;
 pub mod menu;

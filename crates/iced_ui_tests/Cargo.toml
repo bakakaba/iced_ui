@@ -11,8 +11,8 @@ path = "src/lib.rs"
 [dependencies]
 iced = { version = "0.14", features = ["advanced", "image", "svg"] }
 iced_test = "0.14"
-# `lucide` is enabled explicitly so snapshot output is identical
+# `lucide-icons` is enabled explicitly so snapshot output is identical
 # whether tests run via `cargo test -p iced_ui_tests` or
 # `cargo test --workspace` (where feature unification with the demo
 # crate would otherwise toggle it on only for workspace builds).
-iced_ui = { path = "../iced_ui", features = ["lucide"] }
+iced_ui = { path = "../iced_ui", features = ["lucide-icons"] }

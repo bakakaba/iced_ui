@@ -92,10 +92,10 @@ pub enum Severity {
 impl Severity {
     /// Returns the icon glyph and font for this severity level.
     ///
-    /// When the `lucide` feature is enabled, returns the Lucide icon
-    /// character and font. Otherwise returns a Unicode fallback with
-    /// the default font.
-    #[cfg(feature = "lucide")]
+    /// When the `lucide-icons` feature is enabled, returns the Lucide
+    /// icon character and font. Otherwise returns a Unicode fallback
+    /// with the default font.
+    #[cfg(feature = "lucide-icons")]
     pub(super) fn icon_content(self) -> Option<(String, iced::Font)> {
         use crate::icons::FONT;
         use lucide_icons::Icon;
@@ -111,7 +111,7 @@ impl Severity {
     }
 
     /// Returns the icon glyph and font for this severity level.
-    #[cfg(not(feature = "lucide"))]
+    #[cfg(not(feature = "lucide-icons"))]
     pub(super) fn icon_content(self) -> Option<(String, iced::Font)> {
         let glyph = match self {
             Self::Neutral => return None,

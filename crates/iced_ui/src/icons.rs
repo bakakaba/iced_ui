@@ -1,6 +1,6 @@
 //! Lucide icon helpers for `iced_ui` widgets.
 //!
-//! This module is available when the `lucide` feature is enabled.
+//! This module is available when the `lucide-icons` feature is enabled.
 //! It re-exports the [`lucide_icons`] crate's [`Icon`] enum and
 //! font data, plus convenience helpers that produce themed
 //! [`iced::widget::Text`] widgets.

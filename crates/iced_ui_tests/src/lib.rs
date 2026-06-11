@@ -24,10 +24,10 @@
 //!   `iced_ui` would mean shipping test-only API (or hiding it
 //!   behind a feature flag).
 //! - **Independent feature control.** This crate enables `iced`
-//!   features (`image`, `svg`) and the `iced_ui/lucide` feature that
-//!   the library does not enable by default, exercising optional
+//!   features (`image`, `svg`) and the `iced_ui/lucide-icons` feature
+//!   that the library does not enable by default, exercising optional
 //!   surface without forcing it on downstream users. Pinning
-//!   `lucide` here also keeps snapshot output identical between
+//!   `lucide-icons` here also keeps snapshot output identical between
 //!   `cargo test -p iced_ui_tests` and `cargo test --workspace`,
 //!   where feature unification with the demo crate would otherwise
 //!   toggle it on only for workspace builds.
