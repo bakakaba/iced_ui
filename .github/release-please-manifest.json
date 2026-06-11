@@ -1,5 +1,5 @@
 {
-  "crates/iced_ui": "0.1.6",
-  "crates/demo": "0.1.6",
-  "crates/iced_ui_tests": "0.1.6"
+  "crates/iced_ui": "0.1.7",
+  "crates/demo": "0.1.7",
+  "crates/iced_ui_tests": "0.1.7"
 }

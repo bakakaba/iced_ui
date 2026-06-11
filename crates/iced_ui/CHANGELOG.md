@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.7](https://github.com/bakakaba/iced_ui/compare/v0.1.6...v0.1.7) (2026-06-11)
+
+
+### Bug Fixes
+
+* rename lucide feature to lucide-icons to prevent confusing duplicate feature flags ([452338f](https://github.com/bakakaba/iced_ui/commit/452338f1b916e654074996fc4afe430ed8caf51b))
+
 ## [0.1.6](https://github.com/bakakaba/iced_ui/compare/v0.1.5...v0.1.6) (2026-06-11)
 
 
