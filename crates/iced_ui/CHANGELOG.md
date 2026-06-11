@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.1.6](https://github.com/bakakaba/iced_ui/compare/v0.1.5...v0.1.6) (2026-06-11)
+
+
+### Features
+
+* add badge positions ([c3751c9](https://github.com/bakakaba/iced_ui/commit/c3751c9b043314a03128e681b19515bdacebaf08))
+* add corrected number_input ([cb2bce2](https://github.com/bakakaba/iced_ui/commit/cb2bce29bf26cd0e19efff8ddbc857e12f4cdb30))
+* add snackbar positions and severity ([f921b41](https://github.com/bakakaba/iced_ui/commit/f921b41f07072de03b02a2c312c0286a24384c64))
+* add stacking for snackbars ([e307264](https://github.com/bakakaba/iced_ui/commit/e3072645f5f974909670da1e6613741932a160a2))
+* add text_size to theme as the base text size ([0dffc68](https://github.com/bakakaba/iced_ui/commit/0dffc682820818884a631ae6b814cb4fdc886b1f))
+* allow sheet to be dragged to resize ([092df80](https://github.com/bakakaba/iced_ui/commit/092df80fa7d635e7b834371fbfb2b612b8edfc59))
+* complete implementation for slide_sheet ([1b58995](https://github.com/bakakaba/iced_ui/commit/1b589955d04c41dfd86e0e1f82c94dc735b0af95))
+
+
+### Bug Fixes
+
+* fix badge positioning ([690d112](https://github.com/bakakaba/iced_ui/commit/690d1127b29351905045e9c8231e815c82a4213d))
+* fix build pipeline ([3fdd593](https://github.com/bakakaba/iced_ui/commit/3fdd5932c4dde30d555a61d9aeb23ffdda25e51f))
+* fix snackbar preventing pick_list from showing ([8636e12](https://github.com/bakakaba/iced_ui/commit/8636e125531c9384ac7ecd7402e77283d0e94d03))
+
 ## [0.1.5](https://github.com/bakakaba/iced_ui/compare/v0.1.4...v0.1.5) (2026-05-29)
 
 
