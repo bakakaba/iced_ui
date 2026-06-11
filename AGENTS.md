@@ -20,7 +20,10 @@ This is a Cargo workspace (edition 2024, resolver 3) with three members:
   every component in `iced_ui`. Never published.
 - `crates/iced_ui_tests/` — an internal integration-test crate with
   snapshot tests that lock down the visual output of every widget.
-  Never published.
+  Never published. Kept separate from `iced_ui` so test assets
+  (snapshot PNGs, bundled fonts) and heavy dev-dependencies stay out
+  of the published crate; see the crate docs in
+  `crates/iced_ui_tests/src/lib.rs` for the full rationale.
 
 Workspace `version` and `edition` are inherited via `workspace.package`.
 

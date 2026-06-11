@@ -4,6 +4,37 @@
 //! amount of shared infrastructure used by the integration tests in
 //! the `tests/` directory.
 //!
+//! ## Why a separate crate?
+//!
+//! These tests could live in `crates/iced_ui/tests/` with
+//! `iced_test` as a dev-dependency. They are split into their own
+//! workspace member on purpose:
+//!
+//! - **Publish hygiene.** `iced_ui` is the only crate published to
+//!   crates.io and its dependency surface must stay minimal. Keeping
+//!   the tests here keeps the snapshot PNGs under `tests/snapshots/`,
+//!   the bundled fonts under `fonts/`, and the heavy `iced_test`
+//!   dev-dependency (which drags in renderer backends) out of the
+//!   published package and its `cargo publish` verification build.
+//! - **Shared harness library.** Each `tests/*.rs` integration test
+//!   is compiled as its own crate, so test files cannot share code
+//!   with each other directly. The helpers in this `lib.rs`
+//!   ([`assert_snapshot`], [`build`], [`theme`], the font-system
+//!   setup) need a library to live in — and placing them inside
+//!   `iced_ui` would mean shipping test-only API (or hiding it
+//!   behind a feature flag).
+//! - **Independent feature control.** This crate enables `iced`
+//!   features (`image`, `svg`) and the `iced_ui/lucide` feature that
+//!   the library does not enable by default, exercising optional
+//!   surface without forcing it on downstream users. Pinning
+//!   `lucide` here also keeps snapshot output identical between
+//!   `cargo test -p iced_ui_tests` and `cargo test --workspace`,
+//!   where feature unification with the demo crate would otherwise
+//!   toggle it on only for workspace builds.
+//! - **Build hygiene.** Churn in the test harness or snapshot
+//!   references never invalidates `iced_ui` itself, so library
+//!   builds and downstream consumers are unaffected.
+//!
 //! The testing approach is:
 //!
 //! 1. Wrap each widget in a deterministic [`iced::Element`] using its
@@ -11,7 +42,7 @@
 //! 2. Drive it through [`iced_test::Simulator`] which renders to a
 //!    headless backend (CPU `tiny-skia` when `ICED_TEST_BACKEND` is
 //!    set, otherwise `wgpu` if a GPU is available).
-//! 3. Compare the resulting [`iced_test::Snapshot`] against a golden
+//! 3. Compare the resulting [`iced_test::simulator::Snapshot`] against a golden
 //!    PNG committed under `tests/snapshots/`.
 //!
 //! Snapshots are namespaced per backend by `iced_test`; the file name
