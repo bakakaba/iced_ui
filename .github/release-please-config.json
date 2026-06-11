@@ -23,12 +23,14 @@
     "crates/demo": {
       "package-name": "demo",
       "component": "demo",
-      "skip-github-release": true
+      "skip-github-release": true,
+      "skip-changelog": true
     },
     "crates/iced_ui_tests": {
       "package-name": "iced_ui_tests",
       "component": "iced_ui_tests",
-      "skip-github-release": true
+      "skip-github-release": true,
+      "skip-changelog": true
     }
   }
 }
