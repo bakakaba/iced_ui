@@ -1,6 +1,6 @@
 [package]
 name = "iced_ui_tests"
-version = "0.1.6"
+version = "0.1.7"
 edition.workspace = true
 publish = false
 description = "Internal snapshot/integration tests for iced_ui. Kept as a separate, unpublished crate so test assets (snapshot PNGs, bundled fonts) and heavy dev-dependencies stay out of the published iced_ui package. See src/lib.rs for the full rationale."
