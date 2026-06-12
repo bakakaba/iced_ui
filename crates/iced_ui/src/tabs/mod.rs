@@ -18,25 +18,27 @@ pub use style::{Catalog, Style, StyleFn, TabStatus, default};
 
 use iced::advanced::layout::{self, Layout};
 use iced::advanced::renderer;
+use iced::advanced::text::LineHeight;
 use iced::advanced::widget::{Tree, Widget, tree};
 use iced::advanced::{Clipboard, Shell};
 use iced::mouse;
+use std::cell::Cell;
 use std::marker::PhantomData;
 
 use iced::{Background, Color, Element, Event, Length, Pixels, Rectangle, Size};
 
-use crate::FontSizeBase;
+use crate::{FontSizeBase, Space, SpacingBase};
 
-/// Height of a tab cell in logical pixels (label-only).
-const TAB_HEIGHT: f32 = 48.0;
+/// Vertical padding above and below a tab cell's content.
+const VERTICAL_PADDING: Space = Space::sx(1.0);
 
-/// Height of a tab cell when an icon is present (MD3 primary tabs).
-const TAB_HEIGHT_WITH_ICON: f32 = 64.0;
-
-/// Size allocated for the icon inside a tab cell.
-const ICON_SIZE: f32 = 24.0;
+/// Gap between the icon and the label inside a tab cell.
+const ICON_LABEL_GAP: Space = Space::sx(0.5);
 
 /// Thickness of the active indicator line in logical pixels.
+///
+/// A stroke thickness rather than a spacing value, so it stays
+/// absolute and does not scale with the theme's spacing base.
 const INDICATOR_HEIGHT: f32 = 3.0;
 
 /// A single tab within a [`Tabs`] widget.
@@ -75,9 +77,25 @@ struct TabState {
 }
 
 /// Internal state for the whole tab row.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 struct State {
     tabs: Vec<TabState>,
+    /// Cached theme spacing base. Refreshed in [`Widget::draw`] each
+    /// frame so that [`Widget::layout`] can resolve spacing tokens
+    /// even though the theme is not available there.
+    spacing: Cell<u8>,
+    /// Cached theme base text size, refreshed alongside `spacing`.
+    text_size: Cell<f32>,
+}
+
+impl Default for State {
+    fn default() -> Self {
+        Self {
+            tabs: Vec::new(),
+            spacing: Cell::new(crate::Theme::DEFAULT_SPACING),
+            text_size: Cell::new(crate::Theme::DEFAULT_TEXT_SIZE),
+        }
+    }
 }
 
 /// Renders as a horizontal sequence of equal-width cells. The active
@@ -138,26 +156,23 @@ where
         self
     }
 
-    /// Whether any tab has an icon (determines row height).
+    /// Whether any tab has an icon (affects row height).
     fn has_any_icon(&self) -> bool {
         self.tabs.iter().any(|t| t.icon.is_some())
     }
+}
 
-    /// The effective row height based on icon presence.
-    fn row_height(&self) -> f32 {
-        if self.has_any_icon() {
-            TAB_HEIGHT_WITH_ICON
-        } else {
-            TAB_HEIGHT
-        }
-    }
+/// The height of a single line of label text at the given base text
+/// size, using the default line height.
+fn label_line_height(text_size: f32) -> f32 {
+    LineHeight::default().to_absolute(Pixels(text_size)).0
 }
 
 impl<'a, Message, Theme, Renderer> Widget<Message, Theme, Renderer>
     for Tabs<'a, Message, Theme, Renderer>
 where
     Message: Clone + 'a,
-    Theme: Catalog + FontSizeBase + 'a,
+    Theme: Catalog + FontSizeBase + SpacingBase + 'a,
     Renderer: renderer::Renderer + iced::advanced::text::Renderer + 'a,
 {
     fn tag(&self) -> tree::Tag {
@@ -167,6 +182,7 @@ where
     fn state(&self) -> tree::State {
         tree::State::new(State {
             tabs: vec![TabState::default(); self.tabs.len()],
+            ..State::default()
         })
     }
 
@@ -194,7 +210,7 @@ where
     }
 
     fn size(&self) -> Size<Length> {
-        Size::new(self.width, Length::Fixed(self.row_height()))
+        Size::new(self.width, Length::Shrink)
     }
 
     fn layout(
@@ -203,37 +219,62 @@ where
         renderer: &Renderer,
         limits: &layout::Limits,
     ) -> layout::Node {
+        let (spacing, text_size) = {
+            let state = tree.state.downcast_ref::<State>();
+            (state.spacing.get(), state.text_size.get())
+        };
+        let padding = VERTICAL_PADDING.resolve(spacing);
+        let gap = ICON_LABEL_GAP.resolve(spacing);
+        let label_height = label_line_height(text_size);
+
         let tab_count = self.tabs.len();
         if tab_count == 0 {
-            return layout::Node::new(Size::new(0.0, self.row_height()));
+            return layout::Node::new(Size::new(0.0, padding + label_height + padding));
         }
 
-        let row_height = self.row_height();
         let total_width = limits.resolve(self.width, Length::Shrink, Size::ZERO).width;
         let cell_width = total_width / tab_count as f32;
 
-        let mut children = Vec::with_capacity(tab_count);
+        // First pass: lay out icons at their natural size and find
+        // the tallest one, so every cell shares a uniform icon block.
+        let mut icon_nodes: Vec<Option<layout::Node>> = Vec::with_capacity(tab_count);
+        let mut max_icon_height: f32 = 0.0;
         for i in 0..tab_count {
-            // Layout the icon if present.
-            let icon_child = if let Some(icon) = &mut self.tabs[i].icon {
-                let icon_limits = layout::Limits::new(Size::ZERO, Size::new(ICON_SIZE, ICON_SIZE));
-                let icon_node =
+            let icon_node = if let Some(icon) = &mut self.tabs[i].icon {
+                let icon_limits =
+                    layout::Limits::new(Size::ZERO, Size::new(cell_width, f32::INFINITY));
+                let node =
                     icon.as_widget_mut()
                         .layout(&mut tree.children[i], renderer, &icon_limits);
-                Some(icon_node)
+                max_icon_height = max_icon_height.max(node.size().height);
+                Some(node)
             } else {
                 None
             };
+            icon_nodes.push(icon_node);
+        }
 
+        // The row height is determined by the content: vertical
+        // padding around the label, plus the icon block and gap when
+        // any tab carries an icon.
+        let row_height = if self.has_any_icon() {
+            padding + max_icon_height + gap + label_height + padding
+        } else {
+            padding + label_height + padding
+        };
+
+        // Second pass: position the icon blocks within their cells.
+        let mut children = Vec::with_capacity(tab_count);
+        for (i, icon_node) in icon_nodes.into_iter().enumerate() {
             let mut cell_children = Vec::new();
 
-            // Position the icon centered horizontally, in the upper portion.
-            if let Some(mut icon_node) = icon_child {
+            // Center the icon horizontally and within the shared icon
+            // block vertically.
+            if let Some(mut icon_node) = icon_node {
                 let icon_w = icon_node.size().width;
                 let icon_h = icon_node.size().height;
                 let icon_x = (cell_width - icon_w) / 2.0;
-                // Place icon at ~12px from top of cell.
-                let icon_y = 12.0 + (ICON_SIZE - icon_h) / 2.0;
+                let icon_y = padding + (max_icon_height - icon_h) / 2.0;
                 icon_node = icon_node.move_to(iced::Point::new(icon_x, icon_y));
                 cell_children.push(icon_node);
             }
@@ -260,7 +301,14 @@ where
         let tab_style = Catalog::style(theme, &self.class);
         let state = tree.state.downcast_ref::<State>();
         let bounds = layout.bounds();
-        let has_icons = self.has_any_icon();
+
+        // Cache the theme metrics for use in layout() on subsequent
+        // frames.
+        state.spacing.set(theme.spacing());
+        state.text_size.set(theme.text_size());
+
+        let padding = VERTICAL_PADDING.resolve(theme.spacing());
+        let label_height = label_line_height(theme.text_size());
 
         // Draw the row background if set.
         if let Some(bg) = tab_style.background {
@@ -326,22 +374,16 @@ where
                 );
             }
 
-            // Text label — centered in cell. When icons are present,
-            // the label sits in the lower portion.
-            let (text_y, text_bounds_height) = if has_icons {
-                // Icon occupies top ~36px, label occupies the rest
-                let label_top = 12.0 + ICON_SIZE + 4.0; // 40px from top
-                let label_h = cell_bounds.height - label_top - INDICATOR_HEIGHT;
-                (cell_bounds.y + label_top + label_h / 2.0, label_h)
-            } else {
-                (cell_bounds.center_y(), cell_bounds.height)
-            };
+            // Text label — bottom-anchored: it sits just above the
+            // bottom padding, both with and without an icon block
+            // above it.
+            let text_y = cell_bounds.y + cell_bounds.height - padding - label_height / 2.0;
 
             let text = iced::advanced::text::Text {
                 content: tab.label.clone(),
-                bounds: Size::new(cell_bounds.width, text_bounds_height),
+                bounds: Size::new(cell_bounds.width, label_height),
                 size: Pixels(theme.text_size()),
-                line_height: iced::advanced::text::LineHeight::default(),
+                line_height: LineHeight::default(),
                 font: renderer.default_font(),
                 align_x: iced::alignment::Horizontal::Center.into(),
                 align_y: iced::alignment::Vertical::Center,
@@ -441,7 +483,7 @@ impl<'a, Message, Theme, Renderer> From<Tabs<'a, Message, Theme, Renderer>>
     for Element<'a, Message, Theme, Renderer>
 where
     Message: Clone + 'a,
-    Theme: Catalog + FontSizeBase + 'a,
+    Theme: Catalog + FontSizeBase + SpacingBase + 'a,
     Renderer: renderer::Renderer + iced::advanced::text::Renderer + 'a,
 {
     fn from(tabs: Tabs<'a, Message, Theme, Renderer>) -> Self {
