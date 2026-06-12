@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.8](https://github.com/bakakaba/iced_ui/compare/v0.1.7...v0.1.8) (2026-06-12)
+
+
+### Features
+
+* add datetime picker ([5207b32](https://github.com/bakakaba/iced_ui/commit/5207b32acc20f87af954b1224285ccc3a59e26ec))
+
+
+### Bug Fixes
+
+* use theme spacing for tabs ([60db17c](https://github.com/bakakaba/iced_ui/commit/60db17c8f1171781b254191209b163d0290c115f))
+
 ## [0.1.7](https://github.com/bakakaba/iced_ui/compare/v0.1.6...v0.1.7) (2026-06-11)
 
 
