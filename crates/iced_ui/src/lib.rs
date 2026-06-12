@@ -20,6 +20,9 @@ pub mod button;
 pub mod card;
 pub mod chip;
 pub mod color_picker;
+pub mod date_input;
+mod date_time_core;
+pub mod datetime_input;
 pub mod dialog;
 pub mod divider;
 pub mod fab;
@@ -42,13 +45,18 @@ pub mod tabs;
 pub mod text;
 pub mod text_input;
 pub mod theme;
+pub mod time_input;
 pub mod top_app_bar;
+
+pub use chrono;
 
 pub use badge::Badge;
 pub use button::Button;
 pub use card::{Card, Variant};
 pub use chip::Chip;
 pub use color_picker::ColorPicker;
+pub use date_input::DateInput;
+pub use datetime_input::DateTimeInput;
 pub use dialog::Dialog;
 pub use divider::Divider;
 pub use fab::Fab;
@@ -74,4 +82,5 @@ pub use theme::{
     FontSize, FontSizeBase, Information, PaddingSource, Paper, Roundness, RoundnessBase, Space,
     SpacingBase, Theme,
 };
+pub use time_input::TimeInput;
 pub use top_app_bar::TopAppBar;

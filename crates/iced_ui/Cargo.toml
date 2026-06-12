@@ -16,6 +16,7 @@ markdown = ["iced/markdown"]
 lucide-icons = ["dep:lucide-icons"]
 
 [dependencies]
+chrono = { version = "0.4", default-features = false, features = ["std", "clock"] }
 iced = { version = "0.14", features = ["advanced"] }
 lucide-icons = { version = "1", features = ["iced"], optional = true }
 resvg = "0.47.0"

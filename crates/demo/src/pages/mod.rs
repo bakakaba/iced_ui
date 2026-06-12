@@ -3,6 +3,7 @@ mod button;
 mod card;
 mod chip;
 mod colors;
+mod date_time;
 mod dialog;
 mod divider;
 mod fab;
@@ -130,6 +131,7 @@ pages! {
         Card(card::CardPage),
         Chip(chip::ChipPage),
         Colors(colors::ColorsPage),
+        DateTime(date_time::DateTimePage),
         Dialog(dialog::DialogPage),
         Divider(divider::DividerPage),
         Fab(fab::FabPage),
