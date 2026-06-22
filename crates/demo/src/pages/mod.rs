@@ -23,6 +23,7 @@ mod snackbar;
 mod tabs;
 mod text;
 mod top_app_bar;
+mod tree;
 
 use std::fmt::Debug;
 
@@ -151,5 +152,6 @@ pages! {
         Tabs(tabs::TabsPage),
         Text(text::TextPage),
         TopAppBar(top_app_bar::TopAppBarPage),
+        Tree(tree::TreePage),
     }
 }

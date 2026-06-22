@@ -10,6 +10,9 @@
 //! - [`list::List`] — a vertical list of interactive items with
 //!   hover/press feedback, suitable for navigation sidebars and
 //!   selection lists.
+//! - [`tree::Tree`] — a hierarchical tree of expandable/collapsible
+//!   nodes with theme-driven indentation and customizable disclosure
+//!   indicators.
 //!
 //! [iced]: https://github.com/iced-rs/iced
 
@@ -48,6 +51,7 @@ pub mod text_input;
 pub mod theme;
 pub mod time_input;
 pub mod top_app_bar;
+pub mod tree;
 
 pub use chrono;
 
