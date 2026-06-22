@@ -241,3 +241,8 @@ invocations; consult the justfile for the exact commands.
 - Member crates inherit `license`, `repository`, and `edition` from the workspace via `workspace.package`. All workspace members share a single version number managed by release-please's `linked-versions` plugin, which bumps every crate atomically based on conventional commits.
 - Public API items in `iced_ui` should be documented; run
   `cargo doc -p iced_ui` locally when adding public surface.
+- **Avoid import aliases unless strictly required.** Prefer reaching a
+  widget's configuration types through their module path (e.g.
+  `iced_ui::checkbox::State`, `iced_ui::chip::Kind`) rather than
+  re-exporting them at the crate root under an alias. Only introduce a
+  `use ... as ...` alias to resolve a genuine name collision.

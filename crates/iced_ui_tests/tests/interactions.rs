@@ -8,6 +8,7 @@
 use iced::widget::{row, text};
 use iced_test::Error;
 use iced_ui::Chip;
+use iced_ui::checkbox::Checkbox;
 use iced_ui::fab::Fab;
 use iced_ui::icon_button::{self, IconButton};
 use iced_ui_tests::{DEFAULT_SIZE, build};
@@ -17,6 +18,8 @@ enum Message {
     FabPressed,
     ButtonPressed,
     ChipToggled,
+    BoolToggled(bool),
+    OptToggled(Option<bool>),
 }
 
 #[test]
@@ -72,6 +75,52 @@ fn filter_chip_emits_toggle_message() -> Result<(), Error> {
     assert!(
         messages.contains(&Message::ChipToggled),
         "expected ChipToggled in {:?}",
+        messages
+    );
+    Ok(())
+}
+
+#[test]
+fn binary_checkbox_toggles_bool() -> Result<(), Error> {
+    // A `false` checkbox clicked by the user reports `true`.
+    let element = row![
+        Checkbox::new(false)
+            .label(text("Accept"))
+            .on_toggle(Message::BoolToggled)
+    ]
+    .padding(20);
+
+    let mut sim = build(element, DEFAULT_SIZE);
+    sim.click("Accept")?;
+
+    let messages = sim.into_messages().collect::<Vec<_>>();
+    assert!(
+        messages.contains(&Message::BoolToggled(true)),
+        "expected BoolToggled(true) in {:?}",
+        messages
+    );
+    Ok(())
+}
+
+#[test]
+fn tristate_checkbox_can_cycle_into_indeterminate() -> Result<(), Error> {
+    // An `Option<bool>` checkbox in the `Some(false)` value cycles to
+    // the indeterminate (`None`) value when clicked, proving the user
+    // can reach indeterminate.
+    let element = row![
+        Checkbox::new(Some(false))
+            .label(text("Any"))
+            .on_toggle(Message::OptToggled)
+    ]
+    .padding(20);
+
+    let mut sim = build(element, DEFAULT_SIZE);
+    sim.click("Any")?;
+
+    let messages = sim.into_messages().collect::<Vec<_>>();
+    assert!(
+        messages.contains(&Message::OptToggled(None)),
+        "expected OptToggled(None) in {:?}",
         messages
     );
     Ok(())

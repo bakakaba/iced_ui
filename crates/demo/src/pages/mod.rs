@@ -1,6 +1,7 @@
 mod badge;
 mod button;
 mod card;
+mod checkbox;
 mod chip;
 mod colors;
 mod date_time;
@@ -129,6 +130,7 @@ pages! {
         Badge(badge::BadgePage),
         Button(button::ButtonPage),
         Card(card::CardPage),
+        Checkbox(checkbox::CheckboxPage),
         Chip(chip::ChipPage),
         Colors(colors::ColorsPage),
         DateTime(date_time::DateTimePage),

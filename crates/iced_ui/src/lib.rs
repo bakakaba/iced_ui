@@ -18,6 +18,7 @@
 pub mod badge;
 pub mod button;
 pub mod card;
+pub mod checkbox;
 pub mod chip;
 pub mod color_picker;
 pub mod date_input;
@@ -53,6 +54,7 @@ pub use chrono;
 pub use badge::Badge;
 pub use button::Button;
 pub use card::{Card, Variant};
+pub use checkbox::Checkbox;
 pub use chip::Chip;
 pub use color_picker::ColorPicker;
 pub use date_input::DateInput;
