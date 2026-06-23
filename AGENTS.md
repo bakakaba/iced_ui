@@ -246,3 +246,13 @@ invocations; consult the justfile for the exact commands.
   `iced_ui::checkbox::State`, `iced_ui::chip::Kind`) rather than
   re-exporting them at the crate root under an alias. Only introduce a
   `use ... as ...` alias to resolve a genuine name collision.
+- **Theme values must affect the widgets that use them.** When a widget
+  consumes a theme token (spacing, roundness, text size, color), changing
+  that token on the `Theme` must visibly change the widget — never resolve
+  a token against a hardcoded `Theme::DEFAULT_*` as the final value. The
+  usual pitfall is `Widget::layout()`, which has no `&Theme`; use the
+  `Cell<T>` cache pattern (write the resolved value in `draw`, read it in
+  `layout`, seed with `Theme::DEFAULT_*`). If a value genuinely cannot be
+  threaded through, document why and notify the maintainer rather than
+  silently defaulting. See the iced skill (`Custom Widget Implementation`)
+  for the full pattern.

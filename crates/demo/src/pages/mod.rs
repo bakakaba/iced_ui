@@ -11,6 +11,7 @@ mod fab;
 mod icon_button;
 mod inputs;
 mod list;
+mod loading;
 mod menu;
 mod navigation_bar;
 mod navigation_drawer;
@@ -141,6 +142,7 @@ pages! {
         IconButton(icon_button::IconButtonPage),
         Inputs(inputs::InputsPage),
         List(list::ListPage),
+        Loading(loading::LoadingPage),
         Menu(menu::MenuPage),
         NavigationBar(navigation_bar::NavigationBarPage),
         NavigationDrawer(navigation_drawer::NavigationDrawerPage),

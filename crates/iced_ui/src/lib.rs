@@ -13,6 +13,11 @@
 //! - [`tree::Tree`] — a hierarchical tree of expandable/collapsible
 //!   nodes with theme-driven indentation and customizable disclosure
 //!   indicators.
+//! - [`Spinner`] — an indeterminate activity indicator: a ring of
+//!   dots whose opacity chases around the circle.
+//! - [`Progress`] — a horizontal progress bar supporting both
+//!   determinate (known fraction) and indeterminate (animated
+//!   sliding segment) modes.
 //!
 //! [iced]: https://github.com/iced-rs/iced
 
@@ -41,10 +46,12 @@ pub mod navigation_drawer;
 pub mod navigation_rail;
 pub mod number_input;
 pub mod position;
+pub mod progress;
 pub mod screen;
 pub mod segmented_button;
 pub mod slide_sheet;
 pub mod snackbar;
+pub mod spinner;
 pub mod tabs;
 pub mod text;
 pub mod text_input;
@@ -77,10 +84,12 @@ pub use navigation_drawer::NavigationDrawer;
 pub use navigation_rail::NavigationRail;
 pub use number_input::NumberInput;
 pub use position::Position;
+pub use progress::Progress;
 pub use screen::Screen;
 pub use segmented_button::{Segment, SegmentedButton};
 pub use slide_sheet::SlideSheet;
 pub use snackbar::{Notification, NotificationId, Notifications, Snackbar};
+pub use spinner::Spinner;
 pub use tabs::Tabs;
 pub use text::Text;
 pub use text_input::TextInput;

@@ -273,7 +273,36 @@ fn subscription(&self) -> Subscription<Message> {
 
 Specific guidance for the components that live in this library crate:
 
+- **CRITICAL: Theme values must reach the widgets that use them.** Where a
+  widget consumes a theme token (spacing, roundness, text size, color
+  group), changing that token on the `Theme` *must* visibly affect the
+  widget. Do not silently fall back to `Theme::DEFAULT_*` as the final
+  resolved value. The common trap is `Widget::layout()`, which has no
+  `&Theme` parameter: resolving `Space::sx`/`Roundness::sx` there against a
+  hardcoded default means the widget ignores a customized theme. Use the
+  **`Cell<T>` cache pattern** — write the theme-resolved value in `draw()`
+  (which receives `&Theme`), read it in `layout()`, and seed the cell with
+  the matching `Theme::DEFAULT_*` constant so the first frame (before any
+  draw) is reasonable. See `tabs/`, `tree/`, `list/`, and `snackbar/` for
+  the canonical implementation; `progress/` and `spinner/` cache the
+  spacing base this way.
+
+  ```rust
+  struct State {
+      // ...
+      spacing: Cell<u8>, // seeded with Theme::DEFAULT_SPACING
+  }
+  // draw(): state.spacing.set(theme.spacing());
+  // layout(): let s = tree.state.downcast_ref::<State>().spacing.get();
+  //           let px = MY_TOKEN.resolve(s);
+  ```
+
+  If a theme value genuinely cannot be threaded through to where it is
+  needed, **document why in a code comment and explicitly notify the user**
+  (call it out in your summary) rather than quietly defaulting.
+
 - **Implement `Widget::diff()` correctly.** Call `tree.diff_children()` (or
+
   the appropriate variant) with the new children slice. Without this, child
   widget state is reset on every frame.
 - **Do not cache view output inside widgets.** Caching is the *consumer's*
@@ -442,3 +471,8 @@ When reviewing a change that touches iced code, walk this list:
     is not over an interactive overlay element? (CRITICAL)
 12. Does the overlay recompute hover state on `ButtonPressed` (not just
     `CursorMoved`) to handle layout shifts between frames? (CRITICAL)
+13. Does the widget resolve a theme token (spacing, roundness, text size,
+    color) against a hardcoded `Theme::DEFAULT_*` as the final value —
+    especially in `layout()`? → Thread the live theme through (e.g. the
+    `Cell<T>` cache written in `draw`, read in `layout`); only default for
+    the seed/first frame. If truly impossible, document and notify. (CRITICAL)
