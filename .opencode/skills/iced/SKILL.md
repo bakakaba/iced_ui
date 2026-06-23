@@ -320,6 +320,14 @@ Specific guidance for the components that live in this library crate:
   uses `iced_test` with the `tiny-skia` backend for deterministic pixel
   comparisons. Regenerate snapshots intentionally (delete + `just test`)
   rather than tweaking thresholds.
+- **Keep each widget self-contained in its module (HIGH).** A widget's
+  struct, `Widget` impl, style/`Catalog`, and internal helpers belong in
+  one top-level module under `src/<widget>/`. Use private submodules
+  (`style`, `core`, `grid`, `overlay`) for internals, but do not nest
+  public widget modules or split a widget across crate-root siblings.
+  Conceptually related widgets may share one top-level module over a
+  private engine (e.g. `datetime_input::core`), with every sibling widget
+  at the same top level. See AGENTS.md Hard Rules #6–#7.
 
 ---
 

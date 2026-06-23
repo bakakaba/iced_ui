@@ -47,6 +47,25 @@ explicit request from a maintainer.
    configuration. Do not override default values (padding, spacing,
    roundness, etc.) — the demo should reflect the out-of-the-box
    appearance driven by the theme.
+6. **Encapsulate each widget in its own module.** A widget's
+   implementation — struct, builder, `Widget` impl, style/`Catalog`,
+   and any internal helpers or state — lives within a single
+   top-level module under `crates/iced_ui/src/<widget>/` (or
+   `<widget>.rs`). Do not scatter a widget's pieces across sibling
+   crate-root modules. A group of *conceptually related* widgets may
+   share one top-level module and a private shared engine submodule
+   (e.g. `datetime_input` houses `DateInput`, `TimeInput`, and
+   `DateTimeInput` over a private `datetime_input::core` `Picker`); all
+   such sibling widgets still sit at the same top widget level within
+   that module.
+7. **Do not nest widgets beyond the top-level widget module.** A
+   widget module may contain private submodules for its own internals
+   (`style`, `core`, `grid`, `overlay`, etc.), but must not introduce
+   nested *public* widget modules. Reach a widget's configuration
+   types through its single top-level module path (e.g.
+   `iced_ui::chip::Kind`, `iced_ui::datetime_input::Style`), never
+   through a deeper nested widget path.
+
 
 ## Adding a Component
 

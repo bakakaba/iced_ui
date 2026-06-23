@@ -16,9 +16,6 @@
 //! [`TimeInput`]: crate::TimeInput
 //! [`DateTimeInput`]: crate::DateTimeInput
 
-pub(crate) mod grid;
-pub mod style;
-
 use chrono::{Datelike, Local, NaiveDate, NaiveDateTime, NaiveTime, Timelike};
 
 use iced::advanced::layout::{self, Layout};
@@ -33,9 +30,10 @@ use iced::{
     mouse,
 };
 
+use super::style::{Style, StyleFn};
+use super::{grid, style};
 use crate::text_input::style::{self as input_style, Variant};
 use crate::theme::Theme;
-use style::{Style, StyleFn};
 
 // -- Mode --
 

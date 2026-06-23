@@ -6,14 +6,13 @@
 //! be edited by typing (including minutes that are not on the
 //! configured [`minute_step`](TimeInput::minute_step)).
 
-pub use crate::date_time_core::style::{Style, StyleFn, default};
-
 use std::ops::RangeInclusive;
 
 use chrono::{NaiveDate, NaiveTime};
 use iced::{Element, Length};
 
-use crate::date_time_core::{Mode, Picker};
+use super::core::{Mode, Picker};
+use super::style::Style;
 use crate::text_input::style::Variant;
 use crate::theme::Theme;
 
