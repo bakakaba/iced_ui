@@ -2,9 +2,9 @@
 //!
 //! [`Theme`] is the default `Theme` parameter for every widget in this
 //! crate. It composes a built-in [`iced::Theme`] (the colors source)
-//! with a global `spacing`, `roundness`, and `text_size`, all of
-//! which can be tweaked at runtime to restyle every `iced_ui` widget
-//! at once.
+//! with a global `spacing`, `roundness`, `elevation`, and `text_size`,
+//! all of which can be tweaked at runtime to restyle every `iced_ui`
+//! widget at once.
 //!
 //! # Token model
 //!
@@ -42,11 +42,32 @@ pub mod scale;
 pub mod tokens;
 
 pub use scale::{
-    FontSize, FontSizeBase, PaddingSource, Roundness, RoundnessBase, Space, SpacingBase,
+    Elevation, ElevationBase, FontSize, FontSizeBase, PaddingSource, Roundness, RoundnessBase,
+    Space, SpacingBase,
 };
 pub use tokens::{Information, Paper};
 
 use iced::theme::palette;
+
+/// The direction a widget's drop shadow is cast.
+///
+/// Determines the sign of the offset applied by [`Theme::shadow`]; the
+/// magnitude comes from the resolved [`Elevation`]. Most surfaces lift
+/// straight up and cast their shadow [`Down`](Self::Down); edge-anchored
+/// surfaces (drawers, sheets, docked bars) cast away from their anchored
+/// edge.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub enum ShadowDir {
+    /// Shadow offset points down (`+y`). The default.
+    #[default]
+    Down,
+    /// Shadow offset points up (`-y`).
+    Up,
+    /// Shadow offset points left (`-x`).
+    Left,
+    /// Shadow offset points right (`+x`).
+    Right,
+}
 
 /// The `iced_ui` theme.
 ///
@@ -54,16 +75,19 @@ use iced::theme::palette;
 /// theme-aware color (palette, extended palette). `spacing` is the
 /// integer step size for spacing tokens; every [`Space::sx(f)`] resolves
 /// to `f * spacing`. `roundness` plays the same role for
-/// [`Roundness::sx(f)`]. `text_size` is the base text size in logical
-/// pixels from which all widget font sizes are derived.
+/// [`Roundness::sx(f)`], and `elevation` for
+/// [`Elevation::sx(f)`] (the size of every widget's drop shadow).
+/// `text_size` is the base text size in logical pixels from which all
+/// widget font sizes are derived.
 ///
 /// All fields are public so application code can tweak them
 /// directly. Construct one with [`Theme::default`] (Dark colors,
-/// `spacing = 8`, `roundness = 8`, `text_size = 16.0`) or by
-/// setting fields explicitly.
+/// `spacing = 8`, `roundness = 8`, `elevation = 8`, `text_size = 16.0`)
+/// or by setting fields explicitly.
 ///
 /// [`Space::sx(f)`]: scale::Space::sx
 /// [`Roundness::sx(f)`]: scale::Roundness::sx
+/// [`Elevation::sx(f)`]: scale::Elevation::sx
 #[derive(Debug, Clone, PartialEq)]
 pub struct Theme {
     /// The underlying built-in [`iced::Theme`] used as the source of
@@ -78,6 +102,12 @@ pub struct Theme {
     /// [`Roundness::sx(f)`](scale::Roundness::sx) — `sx(2.0)` resolves
     /// to `2.0 * roundness`.
     pub roundness: u8,
+    /// Base unit for elevation tokens. Drives every
+    /// [`Elevation::sx(f)`](scale::Elevation::sx) — `sx(1.0)` resolves
+    /// to `1.0 * elevation` — and thus the size of every widget's drop
+    /// shadow. Increase for more pronounced shadows; set to `0` for a
+    /// flat UI.
+    pub elevation: u8,
     /// Base text size in logical pixels. All widget font sizes are
     /// derived as fractions or multiples of this value via
     /// [`Theme::text(factor)`](Self::text). Defaults to iced's
@@ -98,6 +128,9 @@ impl Theme {
 
     /// The default base unit for roundness tokens.
     pub const DEFAULT_ROUNDNESS: u8 = 8;
+
+    /// The default base unit for elevation tokens.
+    pub const DEFAULT_ELEVATION: u8 = 8;
 
     /// The default base text size — matches iced's built-in
     /// [`Settings::default_text_size`](iced::Settings::default_text_size).
@@ -125,6 +158,40 @@ impl Theme {
     /// theme's [`roundness`](Self::roundness).
     pub fn radius(&self, roundness: scale::Roundness) -> f32 {
         roundness.resolve(self.roundness)
+    }
+
+    /// Resolves an [`Elevation`] token against this theme's
+    /// [`elevation`](Self::elevation), returning the shadow magnitude
+    /// in logical pixels.
+    pub fn elevation(&self, elevation: scale::Elevation) -> f32 {
+        elevation.resolve(self.elevation)
+    }
+
+    /// Builds an [`iced::Shadow`] for the given [`Elevation`], cast in
+    /// the given [`ShadowDir`].
+    ///
+    /// The resolved elevation is used as the shadow's blur radius; the
+    /// offset is half that magnitude along `direction`. The shadow
+    /// color is a translucent black shared by every elevated `iced_ui`
+    /// widget. A zero elevation yields a zeroed (invisible) shadow.
+    pub fn shadow(&self, elevation: scale::Elevation, direction: ShadowDir) -> iced::Shadow {
+        let blur = self.elevation(elevation);
+        let distance = blur / 2.0;
+        let offset = match direction {
+            ShadowDir::Down => iced::Vector::new(0.0, distance),
+            ShadowDir::Up => iced::Vector::new(0.0, -distance),
+            ShadowDir::Left => iced::Vector::new(-distance, 0.0),
+            ShadowDir::Right => iced::Vector::new(distance, 0.0),
+        };
+
+        iced::Shadow {
+            color: iced::Color {
+                a: 0.3,
+                ..iced::Color::BLACK
+            },
+            offset,
+            blur_radius: blur,
+        }
     }
 
     /// Resolves a [`PaddingSource`] into an
@@ -185,6 +252,7 @@ impl From<iced::Theme> for Theme {
             colors,
             spacing: Self::DEFAULT_SPACING,
             roundness: Self::DEFAULT_ROUNDNESS,
+            elevation: Self::DEFAULT_ELEVATION,
             text_size: Self::DEFAULT_TEXT_SIZE,
         }
     }
@@ -199,6 +267,12 @@ impl scale::SpacingBase for Theme {
 impl scale::RoundnessBase for Theme {
     fn roundness(&self) -> u8 {
         self.roundness
+    }
+}
+
+impl scale::ElevationBase for Theme {
+    fn elevation(&self) -> u8 {
+        self.elevation
     }
 }
 

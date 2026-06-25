@@ -56,7 +56,6 @@ impl super::PageView for OverviewPage {
         );
 
         column![
-            Text::h1("Overview"),
             text("A composed layout demonstrating how iced_ui widgets work together.").size(14),
             Text::h2("Composed Layout"),
             screen,

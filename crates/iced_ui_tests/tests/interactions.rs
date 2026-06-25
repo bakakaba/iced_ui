@@ -18,6 +18,7 @@ enum Message {
     FabPressed,
     ButtonPressed,
     ChipToggled,
+    ChipRemoved,
     BoolToggled(bool),
     OptToggled(Option<bool>),
 }
@@ -60,21 +61,100 @@ fn icon_button_emits_on_press_message() -> Result<(), Error> {
 }
 
 #[test]
-fn filter_chip_emits_toggle_message() -> Result<(), Error> {
-    let element = row![
-        Chip::filter(text("Vegetarian"))
-            .selected(false)
-            .on_press(Message::ChipToggled)
-    ]
-    .padding(20);
+fn chip_emits_toggle_message() -> Result<(), Error> {
+    use iced_test::simulator::click;
+
+    let element = row![Chip::new("Vegetarian").on_toggle(Message::ChipToggled)].padding(20);
 
     let mut sim = build(element, DEFAULT_SIZE);
-    sim.click("Vegetarian")?;
+    // The chip renders its label directly (not as a `text` widget), so
+    // target the chip body by a point inside its bounds rather than by
+    // text selector.
+    sim.point_at(iced::Point::new(50.0, 35.0));
+    let _ = sim.simulate(click());
 
     let messages = sim.into_messages().collect::<Vec<_>>();
     assert!(
         messages.contains(&Message::ChipToggled),
         "expected ChipToggled in {:?}",
+        messages
+    );
+    Ok(())
+}
+
+#[test]
+fn chip_readonly_emits_nothing() -> Result<(), Error> {
+    use iced_test::simulator::click;
+
+    // No handler => static token; clicking must not emit anything.
+    let element = row![Chip::<Message>::new("Read only")].padding(20);
+
+    let mut sim = build(element, DEFAULT_SIZE);
+    sim.point_at(iced::Point::new(50.0, 35.0));
+    let _ = sim.simulate(click());
+
+    let messages = sim.into_messages().collect::<Vec<_>>();
+    assert!(
+        messages.is_empty(),
+        "expected no messages from a read-only chip, got {:?}",
+        messages
+    );
+    Ok(())
+}
+
+#[test]
+fn chip_remove_button_emits_remove() -> Result<(), Error> {
+    use iced_test::simulator::click;
+
+    let element = row![
+        Chip::new("John Doe")
+            .on_toggle(Message::ChipToggled)
+            .on_remove(Message::ChipRemoved)
+    ]
+    .padding(20);
+
+    let mut sim = build(element, DEFAULT_SIZE);
+    // Snapshot once so the chip lays out (caching its geometry) and the
+    // remove button's bounds are established near the trailing edge.
+    let _ = sim.snapshot(&iced_ui_tests::theme());
+    // Click the remove circle near the trailing edge of the pill. The
+    // pill is ~91px wide starting at x=20; the circle is centered at
+    // roughly x=95, y=32.
+    sim.point_at(iced::Point::new(95.0, 32.0));
+    let _ = sim.simulate(click());
+
+    let messages = sim.into_messages().collect::<Vec<_>>();
+    assert!(
+        messages.contains(&Message::ChipRemoved),
+        "expected ChipRemoved in {:?}",
+        messages
+    );
+    assert!(
+        !messages.contains(&Message::ChipToggled),
+        "clicking the remove button must not also toggle: {:?}",
+        messages
+    );
+    Ok(())
+}
+
+#[test]
+fn chip_remove_only_body_click_does_nothing() -> Result<(), Error> {
+    use iced_test::simulator::click;
+
+    // A chip with only `on_remove` is not body-interactive: clicking the
+    // label region must not emit anything (only the x button removes).
+    let element = row![Chip::new("John Doe").on_remove(Message::ChipRemoved)].padding(20);
+
+    let mut sim = build(element, DEFAULT_SIZE);
+    let _ = sim.snapshot(&iced_ui_tests::theme());
+    // Click the label region (left side), away from the trailing x.
+    sim.point_at(iced::Point::new(45.0, 34.0));
+    let _ = sim.simulate(click());
+
+    let messages = sim.into_messages().collect::<Vec<_>>();
+    assert!(
+        messages.is_empty(),
+        "body click on a remove-only chip must emit nothing, got {:?}",
         messages
     );
     Ok(())

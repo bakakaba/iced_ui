@@ -76,7 +76,6 @@ impl super::PageView for InputsPage {
             .width(iced::Length::Fixed(100.0));
 
         column![
-            Text::h1("Inputs"),
             text("Text and numeric input fields.").size(14),
             Text::h2("Text Input"),
             row![outlined_input].width(iced::Length::Fixed(300.0)),

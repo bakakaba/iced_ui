@@ -25,7 +25,6 @@ impl super::PageView for DialogPage {
 
     fn view(&self, _log: &ActionLog) -> Element<'_, Msg> {
         column![
-            Text::h1("Dialog"),
             text("Modal overlay with scrim, title, body, and action buttons.").size(14),
             Text::h2("Modal"),
             text("Press the button below to open a dialog:").size(14),

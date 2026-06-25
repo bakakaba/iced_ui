@@ -67,7 +67,6 @@ impl super::PageView for BadgePage {
         .spacing(24);
 
         column![
-            Text::h1("Badge"),
             text("Small dot or count indicator overlaid on content.").size(14),
             Text::h2("Variants"),
             row![dot_badge, count_badge, large_count].spacing(32),

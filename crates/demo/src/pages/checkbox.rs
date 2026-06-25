@@ -46,7 +46,6 @@ impl super::PageView for CheckboxPage {
         let disabled = Checkbox::new(Some(true)).label(text("Disabled").size(14));
 
         column![
-            Text::h1("Checkbox"),
             text("The value type drives behavior: bool is binary, Option<bool> is tri-state.")
                 .size(14),
             Text::h2("Binary"),

@@ -77,13 +77,14 @@ impl Anchor {
         }
     }
 
-    /// Returns the shadow offset vector pointing away from the anchor.
-    fn shadow_offset(self) -> Vector {
+    /// Returns the shadow offset vector pointing away from the anchor,
+    /// at the given magnitude (the theme-resolved shadow distance).
+    fn shadow_offset(self, distance: f32) -> Vector {
         match self {
-            Self::Bottom => Vector::new(0.0, -2.0),
-            Self::Top => Vector::new(0.0, 2.0),
-            Self::Left => Vector::new(2.0, 0.0),
-            Self::Right => Vector::new(-2.0, 0.0),
+            Self::Bottom => Vector::new(0.0, -distance),
+            Self::Top => Vector::new(0.0, distance),
+            Self::Left => Vector::new(distance, 0.0),
+            Self::Right => Vector::new(-distance, 0.0),
         }
     }
 
@@ -532,10 +533,14 @@ where
         let mut sheet_style = <Theme as Catalog>::style(theme, self.style_fn);
         let fraction = self.effective_size();
 
-        // Apply anchor-specific border radius and shadow offset.
+        // Apply anchor-specific border radius and shadow direction.
+        // The style produced a downward shadow; re-orient its offset to
+        // point away from the sheet's anchor, preserving the
+        // theme-resolved magnitude.
         self.anchor
             .apply_border_radius(&mut sheet_style.border.radius);
-        sheet_style.shadow.offset = self.anchor.shadow_offset();
+        let distance = sheet_style.shadow.offset.y;
+        sheet_style.shadow.offset = self.anchor.shadow_offset(distance);
 
         // Sheet panel
         let sheet_layout = layout.children().next().unwrap();

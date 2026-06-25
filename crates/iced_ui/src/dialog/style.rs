@@ -1,8 +1,8 @@
 //! Styling primitives for the [`Dialog`](super::Dialog) widget.
 
-use iced::{Background, Border, Color, Shadow, Vector};
+use iced::{Background, Border, Color, Shadow};
 
-use crate::{Roundness, Theme};
+use crate::{Elevation, Roundness, ShadowDir, Theme};
 
 /// The visual style of a [`Dialog`](super::Dialog).
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -60,11 +60,7 @@ pub fn default(theme: &Theme) -> Style {
             radius: radius.into(),
             ..Border::default()
         },
-        shadow: Shadow {
-            color: Color::from_rgba(0.0, 0.0, 0.0, 0.3),
-            offset: Vector::new(0.0, 4.0),
-            blur_radius: 12.0,
-        },
+        shadow: theme.shadow(Elevation::sx(1.0), ShadowDir::Down),
         title_color: palette.background.base.text,
         text_color: palette.background.weak.text,
     }

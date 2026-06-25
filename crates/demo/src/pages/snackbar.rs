@@ -142,7 +142,6 @@ impl super::PageView for SnackbarPage {
             .on_dismiss(Msg::DismissAuto);
 
         column![
-            Text::h1("Snackbar"),
             text("Temporary notification bar overlaid on the host content.").size(14),
             Text::h2("Anchor"),
             Screen::new(anchor_snackbar),

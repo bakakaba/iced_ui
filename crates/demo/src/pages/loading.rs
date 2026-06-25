@@ -98,7 +98,6 @@ impl super::PageView for LoadingPage {
         .wrap();
 
         column![
-            Text::h1("Loading"),
             text(
                 "Indeterminate spinner and a progress bar with determinate and indeterminate modes."
             )

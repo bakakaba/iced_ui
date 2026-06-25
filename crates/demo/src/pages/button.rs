@@ -126,7 +126,6 @@ impl super::PageView for ButtonPage {
         .align_y(iced::Alignment::Center);
 
         column![
-            Text::h1("Button"),
             text("Solid, Outline, and Ghost variants with multiple sizes and colors.").size(14),
             Text::h2("Variants"),
             variants_row,

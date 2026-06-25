@@ -6,6 +6,7 @@ use iced_ui::Theme;
 use iced_ui::card::Card;
 use iced_ui::color_picker::ColorPicker;
 use iced_ui::dialog::Dialog;
+use iced_ui::icon_button::IconButton;
 use iced_ui::list;
 use iced_ui::menu::{Icon, Item, KeyBinding, Menu, MenuBar, Separator};
 use iced_ui::number_input::NumberInput;
@@ -84,6 +85,9 @@ impl Demo {
             Message::RoundnessChanged(value) => {
                 self.theme.roundness = value;
             }
+            Message::ElevationChanged(value) => {
+                self.theme.elevation = value;
+            }
             Message::SpacingChanged(value) => {
                 self.theme.spacing = value;
             }
@@ -92,6 +96,11 @@ impl Demo {
             }
             Message::Navigate(page) => {
                 self.active_page = ActivePage::navigate(page);
+            }
+            Message::ResetPage => {
+                // Rebuild the active page from its `Default`, restoring
+                // its original local state. Global state is untouched.
+                self.active_page = ActivePage::navigate(self.active_page.page());
             }
             Message::CloseDialog | Message::DialogConfirmed => {
                 self.dialog_open = false;
@@ -129,9 +138,18 @@ impl Demo {
         let current_page = self.active_page.page();
         let nav = build_nav_sidebar(current_page);
 
+        let header = row![
+            Text::h1(current_page.title()),
+            Space::new().width(Length::Fill),
+            IconButton::new(iced_ui::icons::icon(LucideIcon::RotateCcw).size(18))
+                .on_press(Message::ResetPage),
+        ]
+        .align_y(iced::Alignment::Center)
+        .padding(20);
+
         let page_content = self.active_page.view(&self.action_log).map(Message::Page);
 
-        let body = container(scrollable(page_content))
+        let body = container(scrollable(column![header, page_content]))
             .width(Length::Fill)
             .height(Length::Fill);
 
@@ -253,6 +271,17 @@ fn build_settings_pane(demo: &Demo) -> Element<'_, Message> {
             text("Roundness").size(14),
             NumberInput::new(demo.theme.roundness)
                 .on_change(Message::RoundnessChanged)
+                .range(0..=24)
+                .step(1)
+                .width(Length::Fill),
+        ]
+        .spacing(4),
+    );
+    content = content.push(
+        column![
+            text("Elevation").size(14),
+            NumberInput::new(demo.theme.elevation)
+                .on_change(Message::ElevationChanged)
                 .range(0..=24)
                 .step(1)
                 .width(Length::Fill),

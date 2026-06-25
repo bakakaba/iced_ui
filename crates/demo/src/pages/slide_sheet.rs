@@ -45,6 +45,7 @@ impl SlideSheetPage {
 impl super::PageView for SlideSheetPage {
     type Msg = Msg;
     const LABEL: &'static str = "SlideSheet";
+    const TITLE: &'static str = "Slide Sheet";
 
     fn update(&mut self, msg: Msg) -> super::Action {
         match msg {
@@ -105,7 +106,6 @@ impl super::PageView for SlideSheetPage {
         .size(Self::size_or_default(self.right_size));
 
         column![
-            Text::h1("Slide Sheet"),
             text("A panel that slides from any edge. Drag the handle to resize or dismiss.")
                 .size(14),
             row![

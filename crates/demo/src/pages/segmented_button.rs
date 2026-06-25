@@ -18,6 +18,7 @@ pub(crate) struct SegmentedButtonPage {
 impl super::PageView for SegmentedButtonPage {
     type Msg = Msg;
     const LABEL: &'static str = "SegmentedButton";
+    const TITLE: &'static str = "Segmented Button";
 
     fn update(&mut self, msg: Msg) -> super::Action {
         match msg {
@@ -34,7 +35,6 @@ impl super::PageView for SegmentedButtonPage {
             .on_press(Msg::Selected);
 
         column![
-            Text::h1("Segmented Button"),
             text("Single-select toggle group with shared border.").size(14),
             Text::h2("Default"),
             segmented,

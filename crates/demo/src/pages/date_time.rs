@@ -52,7 +52,6 @@ impl super::PageView for DateTimePage {
         let datetime_input = DateTimeInput::new(self.datetime).on_change(Msg::DateTime);
 
         column![
-            Text::h1("Date & Time"),
             text("Date, time, and combined date-time inputs with picker popups.").size(14),
             Text::h2("Date Input"),
             row![column![date_input, text(format!("Value: {}", self.date)).size(12),].spacing(4),],

@@ -90,7 +90,7 @@ pub use tabs::Tabs;
 pub use text::Text;
 pub use text_input::TextInput;
 pub use theme::{
-    FontSize, FontSizeBase, Information, PaddingSource, Paper, Roundness, RoundnessBase, Space,
-    SpacingBase, Theme,
+    Elevation, ElevationBase, FontSize, FontSizeBase, Information, PaddingSource, Paper, Roundness,
+    RoundnessBase, ShadowDir, Space, SpacingBase, Theme,
 };
 pub use top_app_bar::TopAppBar;

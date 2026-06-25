@@ -203,7 +203,7 @@ where
                                 radius: (dot_size / 2.0).into(),
                                 ..iced::Border::default()
                             },
-                            shadow: iced::Shadow::default(),
+                            shadow: badge_style.shadow,
                             ..renderer::Quad::default()
                         },
                         iced::Background::Color(badge_style.background),
@@ -244,7 +244,7 @@ where
                                 radius: radius.into(),
                                 ..iced::Border::default()
                             },
-                            shadow: iced::Shadow::default(),
+                            shadow: badge_style.shadow,
                             ..renderer::Quad::default()
                         },
                         iced::Background::Color(badge_style.background),

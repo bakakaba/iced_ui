@@ -44,9 +44,9 @@ use iced::advanced::renderer;
 use iced::advanced::widget::{Tree, Widget, tree};
 use iced::advanced::{Clipboard, Shell};
 use iced::mouse;
-use iced::{Element, Event, Length, Rectangle, Size, Vector, window};
+use iced::{Element, Event, Length, Rectangle, Size, window};
 
-use crate::{Space, SpacingBase};
+use crate::{ShadowDir, Space, SpacingBase};
 
 /// Duration of one full loop of the indeterminate indicator.
 const LOOP_PERIOD: f32 = 1.4;
@@ -79,13 +79,12 @@ impl Dock {
         !matches!(self, Self::None)
     }
 
-    /// Returns the shadow offset vector pointing away from the docked
-    /// edge (into the content the bar caps). Zero when not docked.
-    fn shadow_offset(self) -> Vector {
+    /// Returns the shadow direction pointing away from the docked
+    /// edge (into the content the bar caps).
+    fn shadow_dir(self) -> ShadowDir {
         match self {
-            Self::None => Vector::new(0.0, 0.0),
-            Self::Top => Vector::new(0.0, 2.0),
-            Self::Bottom => Vector::new(0.0, -2.0),
+            Self::None | Self::Top => ShadowDir::Down,
+            Self::Bottom => ShadowDir::Up,
         }
     }
 

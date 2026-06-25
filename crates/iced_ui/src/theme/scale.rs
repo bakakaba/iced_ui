@@ -43,6 +43,18 @@ pub trait RoundnessBase {
     fn roundness(&self) -> u8;
 }
 
+/// Trait implemented by theme types that expose an elevation base
+/// unit.
+///
+/// Widgets in `iced_ui` that resolve [`Elevation`] tokens during
+/// drawing require their `Theme` generic to implement this trait.
+///
+/// [`Theme`]: crate::Theme
+pub trait ElevationBase {
+    /// Returns the elevation base unit (an integer step size).
+    fn elevation(&self) -> u8;
+}
+
 /// Trait implemented by theme types that expose a base text size.
 ///
 /// Widgets in `iced_ui` that derive font sizes from the theme
@@ -91,7 +103,30 @@ pub struct Space(Repr);
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Roundness(Repr);
 
-/// Internal storage shared by [`Space`] and [`Roundness`].
+/// An elevation token, resolved against [`Theme::elevation`].
+///
+/// Construct with [`Elevation::sx`] for themed values (multiplication
+/// factor) or [`Elevation::px`] for an absolute, unthemed escape
+/// hatch. The resolved value is the base magnitude of a widget's drop
+/// shadow (blur radius and offset distance); [`Theme::shadow`] turns it
+/// into a full [`iced::Shadow`].
+///
+/// # Example
+///
+/// ```
+/// use iced_ui::Elevation;
+///
+/// let e = Elevation::sx(1.0);
+/// assert_eq!(e.resolve(8), 8.0);
+/// ```
+///
+/// [`Theme::elevation`]: crate::Theme::elevation
+/// [`Theme::shadow`]: crate::Theme::shadow
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Elevation(Repr);
+
+/// Internal storage shared by [`Space`], [`Roundness`], and
+/// [`Elevation`].
 #[derive(Debug, Clone, Copy, PartialEq)]
 enum Repr {
     /// A multiplication factor applied to the base unit.
@@ -148,6 +183,33 @@ impl From<u8> for Space {
 }
 
 impl From<u8> for Roundness {
+    fn from(n: u8) -> Self {
+        Self::sx(f32::from(n))
+    }
+}
+
+impl Elevation {
+    /// Constructs a themed elevation token equal to `factor * base`.
+    pub const fn sx(factor: f32) -> Self {
+        Self(Repr::Sx(factor))
+    }
+
+    /// Constructs an absolute elevation token of `value` logical
+    /// pixels.
+    pub const fn px(value: f32) -> Self {
+        Self(Repr::Pixels(value))
+    }
+
+    /// Resolves this elevation token against the given base unit.
+    pub fn resolve(self, base: u8) -> f32 {
+        match self.0 {
+            Repr::Sx(factor) => factor * f32::from(base),
+            Repr::Pixels(v) => v,
+        }
+    }
+}
+
+impl From<u8> for Elevation {
     fn from(n: u8) -> Self {
         Self::sx(f32::from(n))
     }
@@ -264,9 +326,22 @@ mod tests {
     }
 
     #[test]
+    fn elevation_sx_multiplies() {
+        assert_eq!(Elevation::sx(0.0).resolve(8), 0.0);
+        assert_eq!(Elevation::sx(1.0).resolve(8), 8.0);
+        assert_eq!(Elevation::sx(1.5).resolve(8), 12.0);
+    }
+
+    #[test]
+    fn elevation_px_ignores_base() {
+        assert_eq!(Elevation::px(3.5).resolve(8), 3.5);
+    }
+
+    #[test]
     fn from_u8_maps_to_sx() {
         assert_eq!(Space::from(2u8), Space::sx(2.0));
         assert_eq!(Roundness::from(2u8), Roundness::sx(2.0));
+        assert_eq!(Elevation::from(2u8), Elevation::sx(2.0));
     }
 
     #[test]

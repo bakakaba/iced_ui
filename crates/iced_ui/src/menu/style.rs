@@ -2,7 +2,7 @@
 
 use iced::{Background, Border, Color, Shadow};
 
-use crate::{Roundness, Space, Theme};
+use crate::{Elevation, Roundness, ShadowDir, Space, Theme};
 
 /// The visual style of a [`MenuBar`](crate::menu::MenuBar) in a single
 /// state.
@@ -108,14 +108,7 @@ pub fn default(theme: &Theme) -> Style {
             width: 1.0,
             color: palette.background.strong.color,
         },
-        menu_shadow: Shadow {
-            color: Color {
-                a: 0.2,
-                ..Color::BLACK
-            },
-            offset: iced::Vector::new(0.0, 4.0),
-            blur_radius: 12.0,
-        },
+        menu_shadow: theme.shadow(Elevation::sx(1.0), ShadowDir::Down),
 
         item_text: palette.background.base.text,
         item_text_disabled: palette.background.strong.color,

@@ -22,6 +22,7 @@ pub(crate) struct NavigationDrawerPage {
 impl super::PageView for NavigationDrawerPage {
     type Msg = Msg;
     const LABEL: &'static str = "NavDrawer";
+    const TITLE: &'static str = "Navigation Drawer";
 
     fn update(&mut self, msg: Msg) -> super::Action {
         match msg {
@@ -42,7 +43,6 @@ impl super::PageView for NavigationDrawerPage {
 
     fn view(&self, log: &ActionLog) -> Element<'_, Msg> {
         let host: Element<'_, Msg> = column![
-            Text::h1("Navigation Drawer"),
             text("Side panel with destinations. Modal with scrim.").size(14),
             Text::h2("Modal"),
             IconButton::new(text("Toggle Drawer").size(14))

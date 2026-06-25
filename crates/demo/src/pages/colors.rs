@@ -38,7 +38,6 @@ impl super::PageView for ColorsPage {
 
     fn view(&self, _log: &ActionLog) -> Element<'_, Msg> {
         column![
-            Text::h1("Colors"),
             text("Extended palette colors derived from the current theme.").size(14),
             Text::h2("Background"),
             Text::h3("Background"),

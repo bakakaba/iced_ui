@@ -87,9 +87,11 @@ pub(crate) enum Message {
     },
     InformationColorChanged(iced::Color),
     RoundnessChanged(u8),
+    ElevationChanged(u8),
     SpacingChanged(u8),
     TextSizeChanged(u8),
     Navigate(Page),
+    ResetPage,
     // Dialog (global — wraps entire view)
     CloseDialog,
     DialogConfirmed,

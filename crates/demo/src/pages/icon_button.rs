@@ -50,7 +50,6 @@ impl super::PageView for IconButtonPage {
             .on_press(Msg::Toggled);
 
         column![
-            Text::h1("IconButton"),
             text("Four variants: Standard, Filled, Filled Tonal, Outlined. Supports toggle.")
                 .size(14),
             Text::h2("Variants"),

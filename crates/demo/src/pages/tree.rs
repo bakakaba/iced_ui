@@ -68,7 +68,6 @@ impl super::PageView for TreePage {
             .width(Length::Fixed(260.0));
 
         column![
-            Text::h1("Tree"),
             text("A hierarchical tree of expandable nodes. Click a chevron to toggle.").size(14),
             Text::h2("Default"),
             example,

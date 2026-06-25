@@ -35,7 +35,6 @@ impl super::PageView for TabsPage {
             .active(self.active);
 
         column![
-            Text::h1("Tabs"),
             text("Horizontal tab row with active indicator.").size(14),
             Text::h2("Default"),
             tabs,

@@ -1,8 +1,8 @@
 //! Styling primitives for the [`Snackbar`](super::Snackbar) widget.
 
-use iced::{Background, Border, Color, Shadow, Vector};
+use iced::{Background, Border, Color, Shadow};
 
-use crate::{Roundness, Theme};
+use crate::{Elevation, Roundness, ShadowDir, Theme};
 
 use super::Severity;
 
@@ -74,11 +74,7 @@ pub fn default(theme: &Theme, severity: Severity) -> Style {
             radius: radius.into(),
             ..Border::default()
         },
-        shadow: Shadow {
-            color: Color::from_rgba(0.0, 0.0, 0.0, 0.3),
-            offset: Vector::new(0.0, 2.0),
-            blur_radius: 8.0,
-        },
+        shadow: theme.shadow(Elevation::sx(1.0), ShadowDir::Down),
         severity_color,
     }
 }

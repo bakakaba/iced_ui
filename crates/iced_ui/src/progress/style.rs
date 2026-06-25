@@ -97,14 +97,7 @@ pub fn default(theme: &Theme, color: Color, dock: Dock, elevated: bool) -> Style
     let palette = theme.extended_palette();
 
     let shadow = if elevated {
-        iced::Shadow {
-            color: iced::Color {
-                a: 0.3,
-                ..iced::Color::BLACK
-            },
-            offset: dock.shadow_offset(),
-            blur_radius: 8.0,
-        }
+        theme.shadow(crate::Elevation::sx(1.0), dock.shadow_dir())
     } else {
         iced::Shadow::default()
     };

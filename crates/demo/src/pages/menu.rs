@@ -63,7 +63,6 @@ impl super::PageView for MenuPage {
         );
 
         column![
-            Text::h1("Menu"),
             text("Dropdown menus attached to a menu bar or standalone button.").size(14),
             Text::h2("MenuBar"),
             menu_bar,

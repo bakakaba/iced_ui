@@ -16,7 +16,6 @@ impl super::PageView for TextPage {
 
     fn view(&self, _log: &ActionLog) -> Element<'_, Msg> {
         column![
-            Text::h1("Text"),
             text("Semantic heading levels with bold weight and scaled sizes.").size(14),
             Text::h2("Heading Levels"),
             Text::h1("Heading 1"),

@@ -17,6 +17,7 @@ pub(crate) struct NavigationBarPage;
 impl super::PageView for NavigationBarPage {
     type Msg = Msg;
     const LABEL: &'static str = "NavigationBar";
+    const TITLE: &'static str = "Navigation Bar";
 
     fn view(&self, _log: &ActionLog) -> Element<'_, Msg> {
         let bar = NavigationBar::new(|_idx| Msg::Noop)
@@ -26,7 +27,6 @@ impl super::PageView for NavigationBarPage {
             .active(0);
 
         column![
-            Text::h1("Navigation Bar"),
             text("Bottom bar with 3-5 icon+label destinations.").size(14),
             Text::h2("Default"),
             bar,

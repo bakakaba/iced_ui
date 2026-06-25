@@ -68,7 +68,6 @@ impl super::PageView for CardPage {
         .background_svg(gradient_svg_handle());
 
         column![
-            Text::h1("Card"),
             text("Contained surface for grouping related content.").size(14),
             Text::h2("Variants"),
             row![flat_card, elevated_card].spacing(16).wrap(),

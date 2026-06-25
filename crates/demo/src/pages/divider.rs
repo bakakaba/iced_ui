@@ -18,7 +18,6 @@ impl super::PageView for DividerPage {
 
     fn view(&self, _log: &ActionLog) -> Element<'_, Msg> {
         column![
-            Text::h1("Divider"),
             text("Horizontal and vertical separators with optional insets.").size(14),
             Text::h2("Type"),
             Divider::horizontal(),

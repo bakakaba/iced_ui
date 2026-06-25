@@ -1,8 +1,8 @@
 //! Styling primitives for the [`Fab`](super::Fab) widget.
 
-use iced::{Background, Border, Color, Shadow, Vector};
+use iced::{Background, Border, Color, Shadow};
 
-use crate::{Roundness, Theme};
+use crate::{Elevation, Roundness, ShadowDir, Theme};
 
 /// The size variant of a FAB.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
@@ -92,46 +92,20 @@ impl Catalog for Theme {
 /// The default FAB style.
 ///
 /// Uses the primary container color for the background and primary
-/// on-container for the icon. The "lowered" variant reduces the
-/// shadow.
-pub fn default(theme: &Theme, lowered: bool, status: Status) -> Style {
+/// on-container for the icon. The drop shadow is driven entirely by the
+/// theme's [`elevation`](crate::Theme::elevation) and does not change
+/// with the lowered flag or interaction status.
+pub fn default(theme: &Theme, _lowered: bool, _status: Status) -> Style {
     let palette = theme.extended_palette();
     let radius = theme.radius(Roundness::sx(4.0));
 
-    let shadow_offset = if lowered { 1.0 } else { 3.0 };
-    let shadow_blur = if lowered { 2.0 } else { 6.0 };
-
-    let base = Style {
+    Style {
         background: Background::Color(palette.primary.weak.color),
         icon_color: palette.primary.base.color,
         border: Border {
             radius: radius.into(),
             ..Border::default()
         },
-        shadow: Shadow {
-            color: Color::from_rgba(0.0, 0.0, 0.0, 0.3),
-            offset: Vector::new(0.0, shadow_offset),
-            blur_radius: shadow_blur,
-        },
-    };
-
-    match status {
-        Status::Active => base,
-        Status::Hovered => Style {
-            shadow: Shadow {
-                offset: Vector::new(0.0, shadow_offset + 2.0),
-                blur_radius: shadow_blur + 4.0,
-                ..base.shadow
-            },
-            ..base
-        },
-        Status::Pressed => Style {
-            shadow: Shadow {
-                offset: Vector::new(0.0, shadow_offset),
-                blur_radius: shadow_blur,
-                ..base.shadow
-            },
-            ..base
-        },
+        shadow: theme.shadow(Elevation::sx(1.0), ShadowDir::Down),
     }
 }

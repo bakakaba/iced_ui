@@ -18,6 +18,7 @@ pub(crate) struct NavigationRailPage;
 impl super::PageView for NavigationRailPage {
     type Msg = Msg;
     const LABEL: &'static str = "NavigationRail";
+    const TITLE: &'static str = "Navigation Rail";
 
     fn view(&self, _log: &ActionLog) -> Element<'_, Msg> {
         let rail = NavigationRail::new(|_idx| Msg::Noop)
@@ -28,7 +29,6 @@ impl super::PageView for NavigationRailPage {
             .active(0);
 
         column![
-            Text::h1("Navigation Rail"),
             text("Vertical icon+label destinations for desktop/tablet.").size(14),
             Text::h2("Default"),
             container(rail).height(Length::Fixed(300.0)),

@@ -1,8 +1,8 @@
 //! Styling primitives for the [`Badge`](super::Badge) widget.
 
-use iced::Color;
+use iced::{Color, Shadow};
 
-use crate::Theme;
+use crate::{Elevation, ShadowDir, Theme};
 
 /// The visual style of a [`Badge`](super::Badge).
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -12,6 +12,8 @@ pub struct Style {
     /// Text color of the badge count label. Only relevant for count
     /// badges.
     pub text_color: Color,
+    /// Drop shadow cast by the badge indicator.
+    pub shadow: Shadow,
 }
 
 /// A function that returns a [`Style`] for a given theme.
@@ -48,5 +50,6 @@ pub fn default(theme: &Theme) -> Style {
     Style {
         background: palette.danger.base.color,
         text_color: palette.danger.base.text,
+        shadow: theme.shadow(Elevation::sx(0.5), ShadowDir::Down),
     }
 }

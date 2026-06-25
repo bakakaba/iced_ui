@@ -12,7 +12,7 @@
 
 use iced::{Background, Border, Color, Shadow};
 
-use crate::{Roundness, Theme};
+use crate::{Elevation, Roundness, ShadowDir, Theme};
 
 /// The visual variants of a [`Card`](crate::card::Card).
 ///
@@ -124,14 +124,7 @@ pub fn elevated(theme: &Theme) -> Style {
             width: 0.0,
             color: Color::TRANSPARENT,
         },
-        shadow: Shadow {
-            color: Color {
-                a: 0.2,
-                ..Color::BLACK
-            },
-            offset: iced::Vector::new(0.0, 4.0),
-            blur_radius: 12.0,
-        },
+        shadow: theme.shadow(Elevation::sx(1.0), ShadowDir::Down),
         text_color: Some(palette.background.base.text),
     }
 }

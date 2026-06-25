@@ -37,7 +37,6 @@ impl super::PageView for ScreenPage {
         .mode(Mode::MobilePortrait);
 
         column![
-            Text::h1("Screen"),
             text("Aspect-ratio container simulating device viewports.").size(14),
             Text::h2("Desktop (16:9)"),
             desktop,

@@ -37,7 +37,13 @@ use crate::state::ActionLog;
 pub(super) trait PageView: Default {
     type Msg: Debug + Clone;
 
+    /// Compact name shown in the navigation sidebar.
     const LABEL: &'static str;
+
+    /// Title shown in the page header. Defaults to [`Self::LABEL`];
+    /// override when the header should read more fully than the
+    /// sidebar entry (e.g. "Navigation Drawer" vs "NavDrawer").
+    const TITLE: &'static str = Self::LABEL;
 
     fn update(&mut self, _msg: Self::Msg) -> Action {
         Action::None
@@ -66,6 +72,12 @@ macro_rules! pages {
             pub(crate) fn label(self) -> &'static str {
                 match self {
                     $($( Self::$variant => <$page_ty as PageView>::LABEL, )*)*
+                }
+            }
+
+            pub(crate) fn title(self) -> &'static str {
+                match self {
+                    $($( Self::$variant => <$page_ty as PageView>::TITLE, )*)*
                 }
             }
 

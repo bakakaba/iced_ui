@@ -44,8 +44,8 @@ impl super::PageView for FabPage {
             .on_press(Msg::Pressed);
 
         column![
-            Text::h1("FAB (Floating Action Button)"),
-            text("Small, Regular, Large, Extended, and Lowered variants.").size(14),
+            text("Floating Action Button. Small, Regular, Large, Extended, and Lowered variants.")
+                .size(14),
             Text::h2("Sizes"),
             row![small_fab, regular_fab, large_fab, extended_fab, lowered_fab].spacing(16),
         ]

@@ -15,6 +15,7 @@ pub(crate) struct TopAppBarPage;
 impl super::PageView for TopAppBarPage {
     type Msg = Msg;
     const LABEL: &'static str = "TopAppBar";
+    const TITLE: &'static str = "Top App Bar";
 
     fn view(&self, _log: &ActionLog) -> Element<'_, Msg> {
         let nav_icon: Element<'_, Msg> = icons::icon(Icon::ArrowLeft).into();
@@ -27,7 +28,6 @@ impl super::PageView for TopAppBarPage {
             .action(action2);
 
         column![
-            Text::h1("Top App Bar"),
             text("Title bar with navigation icon, title, and action icons.").size(14),
             Text::h2("Default"),
             app_bar,
