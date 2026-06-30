@@ -168,10 +168,12 @@ impl Demo {
 
         // Wrap in Dialog if needed
         let content = Dialog::new(content)
-            .title("Confirm Action")
-            .body("Are you sure you want to proceed? This action cannot be undone.")
-            .confirm("Confirm", Message::DialogConfirmed)
-            .dismiss("Cancel", Message::CloseDialog)
+            .title(text("Confirm Action").size(20))
+            .content(text(
+                "Are you sure you want to proceed? This action cannot be undone.",
+            ))
+            .confirm(Message::DialogConfirmed)
+            .dismiss(Message::CloseDialog)
             .on_scrim_press(Message::CloseDialog)
             .open(self.dialog_open);
 

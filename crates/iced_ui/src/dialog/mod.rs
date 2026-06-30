@@ -1,20 +1,31 @@
-//! Modal overlay presenting a title, content, and action buttons
-//! on top of a scrim.
+//! Modal overlay presenting an optional title, arbitrary content, and
+//! optional action buttons on top of a scrim.
 //!
 //! The [`Dialog`] widget wraps "host" content. When `open` is `true`,
 //! a semi-transparent scrim covers the host, and a centered dialog
 //! card is rendered via the overlay system.
 //!
+//! Unlike a fixed title/body/buttons layout, the dialog card is
+//! composed entirely of real widgets: the [`content`](Dialog::content)
+//! is any [`Element`], an optional [`title`](Dialog::title) is any
+//! [`Element`] placed above it, and the action row is built from real
+//! [`Button`](crate::Button)s. Specifying
+//! [`confirm`](Dialog::confirm)/[`dismiss`](Dialog::dismiss) generates a
+//! standard Material-style "OK"/"Cancel" row; for full control supply a
+//! custom [`actions`](Dialog::actions) element, or compose everything
+//! inside [`content`](Dialog::content) alone.
+//!
 //! # Example
 //!
 //! ```ignore
+//! use iced::widget::text;
 //! use iced_ui::dialog::Dialog;
 //!
 //! let dialog = Dialog::new(host_content)
-//!     .title("Confirm action")
-//!     .body("Are you sure you want to proceed?")
-//!     .confirm("OK", Message::Confirmed)
-//!     .dismiss("Cancel", Message::Dismissed)
+//!     .title(text("Confirm action"))
+//!     .content(text("Are you sure you want to proceed?"))
+//!     .confirm(Message::Confirmed)
+//!     .dismiss(Message::Dismissed)
 //!     .open(self.dialog_visible);
 //! ```
 
@@ -25,78 +36,126 @@ pub use style::{Catalog, Style, StyleFn, default};
 use iced::advanced::layout::{self, Layout};
 use iced::advanced::overlay;
 use iced::advanced::renderer;
-use iced::advanced::text::{self, Text};
+use iced::advanced::text;
 use iced::advanced::widget::{Operation, Tree, Widget, tree};
 use iced::advanced::{Clipboard, Shell};
-use iced::mouse;
-use iced::{Border, Element, Event, Length, Pixels, Point, Rectangle, Size, Vector};
+use iced::widget::{Space, column, row, text as itext};
+use iced::{Alignment, Element, Event, Length, Point, Rectangle, Size, Vector, mouse};
 
+use crate::button::{self, Button};
 use crate::{FontSizeBase, Roundness, RoundnessBase, SpacingBase};
 
 /// Maximum width of the dialog container.
 const MAX_WIDTH: f32 = 560.0;
 /// Minimum width of the dialog container.
 const MIN_WIDTH: f32 = 280.0;
+/// Inner padding of the dialog card, in logical pixels.
+const PADDING: f32 = 24.0;
+/// Vertical gap between title, content, and the action row.
+const SPACING: f32 = 16.0;
+
+/// Trait bounds shared by the dialog's [`Theme`] across every `impl`.
+///
+/// The dialog composes real [`Button`](crate::Button) and text widgets,
+/// so its theme must satisfy their catalogs in addition to the
+/// dialog's own.
+pub trait DialogTheme:
+    Catalog + button::Catalog + iced::widget::text::Catalog + SpacingBase + RoundnessBase + FontSizeBase
+{
+}
+
+impl<T> DialogTheme for T where
+    T: Catalog
+        + button::Catalog
+        + iced::widget::text::Catalog
+        + SpacingBase
+        + RoundnessBase
+        + FontSizeBase
+{
+}
 
 /// Wraps host content and conditionally displays a modal dialog
-/// overlay with title, body text, and action buttons.
+/// overlay composed of real widgets.
 pub struct Dialog<'a, Message, Theme = crate::Theme, Renderer = iced::Renderer>
 where
     Theme: Catalog,
     Renderer: renderer::Renderer,
 {
     host: Element<'a, Message, Theme, Renderer>,
-    title: Option<String>,
-    body: Option<String>,
-    confirm: Option<(String, Message)>,
-    dismiss: Option<(String, Message)>,
+    title: Option<Element<'a, Message, Theme, Renderer>>,
+    content: Option<Element<'a, Message, Theme, Renderer>>,
+    confirm: Option<Message>,
+    dismiss: Option<Message>,
+    actions: Option<Element<'a, Message, Theme, Renderer>>,
+    /// The composed dialog card content, assembled when the [`Dialog`]
+    /// is converted into an [`Element`].
+    card: Option<Element<'a, Message, Theme, Renderer>>,
     on_scrim_press: Option<Message>,
     open: bool,
     roundness: Option<Roundness>,
-    class: Theme::Class<'a>,
+    class: <Theme as Catalog>::Class<'a>,
 }
 
 impl<'a, Message, Theme, Renderer> Dialog<'a, Message, Theme, Renderer>
 where
-    Theme: Catalog,
-    Renderer: renderer::Renderer,
+    Message: Clone + 'a,
+    Theme: DialogTheme + 'a,
+    Renderer: renderer::Renderer + text::Renderer + 'a,
 {
     /// Creates a new dialog wrapping the given host content.
     pub fn new(host: impl Into<Element<'a, Message, Theme, Renderer>>) -> Self {
         Self {
             host: host.into(),
             title: None,
-            body: None,
+            content: None,
             confirm: None,
             dismiss: None,
+            actions: None,
+            card: None,
             on_scrim_press: None,
             open: false,
             roundness: None,
-            class: Theme::default(),
+            class: <Theme as Catalog>::default(),
         }
     }
 
-    /// Sets the dialog title text.
-    pub fn title(mut self, title: impl Into<String>) -> Self {
+    /// Sets the dialog title element, rendered above the content.
+    pub fn title(mut self, title: impl Into<Element<'a, Message, Theme, Renderer>>) -> Self {
         self.title = Some(title.into());
         self
     }
 
-    /// Sets the dialog body text.
-    pub fn body(mut self, body: impl Into<String>) -> Self {
-        self.body = Some(body.into());
+    /// Sets the main dialog content element.
+    pub fn content(mut self, content: impl Into<Element<'a, Message, Theme, Renderer>>) -> Self {
+        self.content = Some(content.into());
         self
     }
 
-    /// Adds a confirm action button with a label and message.
-    pub fn confirm(mut self, label: impl Into<String>, message: Message) -> Self {
-        self.confirm = Some((label.into(), message));
+    /// Adds a default "OK" confirm button wired to the given message.
+    ///
+    /// Generates a standard Material-style action row alongside any
+    /// [`dismiss`](Self::dismiss) button. For custom labels or buttons,
+    /// use [`actions`](Self::actions) instead.
+    pub fn confirm(mut self, message: Message) -> Self {
+        self.confirm = Some(message);
         self
     }
 
-    /// Adds a dismiss action button with a label and message.
-    pub fn dismiss(mut self, label: impl Into<String>, message: Message) -> Self {
-        self.dismiss = Some((label.into(), message));
+    /// Adds a default "Cancel" dismiss button wired to the given
+    /// message.
+    ///
+    /// Generates a standard Material-style action row alongside any
+    /// [`confirm`](Self::confirm) button. For custom labels or buttons,
+    /// use [`actions`](Self::actions) instead.
+    pub fn dismiss(mut self, message: Message) -> Self {
+        self.dismiss = Some(message);
+        self
+    }
+
+    /// Sets a custom action row element, overriding the default
+    /// confirm/dismiss buttons.
+    pub fn actions(mut self, actions: impl Into<Element<'a, Message, Theme, Renderer>>) -> Self {
+        self.actions = Some(actions.into());
         self
     }
 
@@ -123,19 +182,72 @@ where
     }
 
     /// Sets the style class.
-    pub fn style(mut self, class: impl Into<Theme::Class<'a>>) -> Self {
+    pub fn style(mut self, class: impl Into<<Theme as Catalog>::Class<'a>>) -> Self {
         self.class = class.into();
         self
+    }
+
+    /// Builds the default Material-style action row from the configured
+    /// confirm/dismiss messages, if any. Returns `None` when no default
+    /// buttons were requested.
+    fn default_actions(&self) -> Option<Element<'a, Message, Theme, Renderer>> {
+        if self.confirm.is_none() && self.dismiss.is_none() {
+            return None;
+        }
+
+        // Right-align the buttons within the card.
+        let mut actions = row![Space::new().width(Length::Fill)]
+            .spacing(8)
+            .width(Length::Fill)
+            .align_y(Alignment::Center);
+
+        if let Some(msg) = self.dismiss.clone() {
+            actions = actions.push(
+                Button::new(itext("Cancel"))
+                    .variant(button::Variant::Ghost)
+                    .on_press(msg),
+            );
+        }
+
+        if let Some(msg) = self.confirm.clone() {
+            actions = actions.push(
+                Button::new(itext("OK"))
+                    .variant(button::Variant::Solid)
+                    .on_press(msg),
+            );
+        }
+
+        Some(actions.into())
+    }
+
+    /// Assembles the dialog card content from the configured title,
+    /// content, and action pieces. Consumes the individual slots.
+    fn compose(&mut self) {
+        let mut col = column![].spacing(SPACING).width(Length::Fill);
+
+        if let Some(title) = self.title.take() {
+            col = col.push(title);
+        }
+
+        if let Some(content) = self.content.take() {
+            col = col.push(content);
+        }
+
+        // Prefer a custom action row; otherwise build the default one.
+        let actions = self.actions.take().or_else(|| self.default_actions());
+
+        if let Some(actions) = actions {
+            col = col.push(actions);
+        }
+
+        self.card = Some(col.padding(PADDING).into());
     }
 }
 
 /// State for the dialog overlay interaction.
 #[derive(Debug, Default)]
 struct DialogState {
-    confirm_hovered: bool,
-    confirm_pressed: bool,
-    dismiss_hovered: bool,
-    dismiss_pressed: bool,
+    /// Whether a press began on the scrim (outside the dialog card).
     scrim_pressed: bool,
 }
 
@@ -143,7 +255,7 @@ impl<'a, Message, Theme, Renderer> Widget<Message, Theme, Renderer>
     for Dialog<'a, Message, Theme, Renderer>
 where
     Message: Clone + 'a,
-    Theme: Catalog + SpacingBase + RoundnessBase + FontSizeBase + 'a,
+    Theme: DialogTheme + 'a,
     Renderer: renderer::Renderer + text::Renderer + 'a,
 {
     fn tag(&self) -> tree::Tag {
@@ -155,11 +267,21 @@ where
     }
 
     fn children(&self) -> Vec<Tree> {
-        vec![Tree::new(&self.host)]
+        let mut children = vec![Tree::new(&self.host)];
+        if let Some(card) = &self.card {
+            children.push(Tree::new(card));
+        } else {
+            children.push(Tree::empty());
+        }
+        children
     }
 
     fn diff(&self, tree: &mut Tree) {
-        tree.diff_children(std::slice::from_ref(&self.host));
+        tree.children.resize_with(2, Tree::empty);
+        tree.children[0].diff(&self.host);
+        if let Some(card) = &self.card {
+            tree.children[1].diff(card);
+        }
     }
 
     fn size(&self) -> Size<Length> {
@@ -274,17 +396,17 @@ where
             );
         }
 
+        let card = self.card.as_mut()?;
+        let (_, card_tree) = tree.children.split_at_mut(1);
+
         Some(overlay::Element::new(Box::new(DialogOverlay {
-            title: self.title.as_deref(),
-            body: self.body.as_deref(),
-            confirm: self.confirm.as_ref(),
-            dismiss: self.dismiss.as_ref(),
+            card,
+            card_tree: &mut card_tree[0],
             on_scrim_press: self.on_scrim_press.as_ref(),
             state: tree.state.downcast_mut(),
             style_fn: &self.class,
             roundness: self.roundness,
             viewport: *viewport,
-            _renderer: std::marker::PhantomData,
         })))
     }
 }
@@ -295,63 +417,72 @@ where
     Theme: Catalog,
     Renderer: renderer::Renderer,
 {
-    title: Option<&'b str>,
-    body: Option<&'b str>,
-    confirm: Option<&'b (String, Message)>,
-    dismiss: Option<&'b (String, Message)>,
+    card: &'b mut Element<'a, Message, Theme, Renderer>,
+    card_tree: &'b mut Tree,
     on_scrim_press: Option<&'b Message>,
     state: &'b mut DialogState,
     style_fn: &'b <Theme as Catalog>::Class<'a>,
     roundness: Option<Roundness>,
     viewport: Rectangle,
-    _renderer: std::marker::PhantomData<Renderer>,
+}
+
+impl<Message, Theme, Renderer> DialogOverlay<'_, '_, Message, Theme, Renderer>
+where
+    Theme: Catalog,
+    Renderer: renderer::Renderer,
+{
+    /// Computes the centered dialog card rectangle within the viewport.
+    fn card_bounds(&self, content: Size) -> Rectangle {
+        let viewport_size = self.viewport.size();
+        let max_w = MAX_WIDTH.min(viewport_size.width - 48.0).max(MIN_WIDTH);
+        let width = content.width.clamp(MIN_WIDTH.min(max_w), max_w);
+        let height = content.height.min(viewport_size.height - 48.0);
+        let x = (viewport_size.width - width) / 2.0;
+        let y = (viewport_size.height - height) / 2.0;
+        Rectangle {
+            x,
+            y,
+            width,
+            height,
+        }
+    }
 }
 
 impl<Message, Theme, Renderer> overlay::Overlay<Message, Theme, Renderer>
     for DialogOverlay<'_, '_, Message, Theme, Renderer>
 where
     Message: Clone,
-    Theme: Catalog + SpacingBase + RoundnessBase + FontSizeBase,
+    Theme: DialogTheme,
     Renderer: renderer::Renderer + text::Renderer,
 {
-    fn layout(&mut self, _renderer: &Renderer, _bounds: Size) -> layout::Node {
+    fn layout(&mut self, renderer: &Renderer, _bounds: Size) -> layout::Node {
         let viewport_size = self.viewport.size();
+        let max_w = MAX_WIDTH.min(viewport_size.width - 48.0).max(MIN_WIDTH);
 
-        let dialog_width = MAX_WIDTH.min(viewport_size.width - 48.0).max(MIN_WIDTH);
-        let padding = 24.0_f32;
-        let mut content_height = padding;
+        // Measure the composed card content within the available width.
+        let limits = layout::Limits::new(
+            Size::ZERO,
+            Size::new(max_w, (viewport_size.height - 48.0).max(0.0)),
+        );
+        let card_node = self
+            .card
+            .as_widget_mut()
+            .layout(self.card_tree, renderer, &limits);
+        let content = card_node.size();
 
-        if self.title.is_some() {
-            content_height += 28.0 + 16.0;
-        }
+        let bounds = self.card_bounds(content);
+        let card_node = card_node.move_to(Point::new(bounds.x, bounds.y));
 
-        if self.body.is_some() {
-            content_height += 60.0 + 24.0; // estimate body height
-        }
-
-        if self.confirm.is_some() || self.dismiss.is_some() {
-            content_height += 40.0;
-        }
-
-        content_height += padding;
-
-        let dialog_height = content_height.min(viewport_size.height - 48.0);
-        let dialog_x = (viewport_size.width - dialog_width) / 2.0;
-        let dialog_y = (viewport_size.height - dialog_height) / 2.0;
-
-        let dialog_node = layout::Node::new(Size::new(dialog_width, dialog_height))
-            .move_to(Point::new(dialog_x, dialog_y));
-
-        layout::Node::with_children(viewport_size, vec![dialog_node])
+        layout::Node::with_children(viewport_size, vec![card_node])
     }
 
     fn draw(
         &self,
         renderer: &mut Renderer,
         theme: &Theme,
-        _style: &renderer::Style,
+        style: &renderer::Style,
         layout: Layout<'_>,
-        _cursor: mouse::Cursor,
+        cursor: mouse::Cursor,
     ) {
         let dialog_style = <Theme as Catalog>::style(theme, self.style_fn);
         let bounds = layout.bounds();
@@ -373,12 +504,12 @@ where
         );
 
         // Dialog card
-        let dialog_layout = layout.children().next().unwrap();
-        let dialog_bounds = dialog_layout.bounds();
+        let card_layout = layout.children().next().unwrap();
+        let card_bounds = card_layout.bounds();
 
         renderer.fill_quad(
             renderer::Quad {
-                bounds: dialog_bounds,
+                bounds: card_bounds,
                 border: card_border,
                 shadow: dialog_style.shadow,
                 ..renderer::Quad::default()
@@ -386,139 +517,16 @@ where
             dialog_style.background,
         );
 
-        let padding = 24.0_f32;
-        let mut y_cursor = dialog_bounds.y + padding;
-
-        // Title
-        if let Some(title) = self.title {
-            renderer.fill_text(
-                Text {
-                    content: title.to_string(),
-                    bounds: Size::new(dialog_bounds.width - padding * 2.0, 28.0),
-                    size: Pixels(theme.text_size() * 1.375),
-                    line_height: text::LineHeight::Relative(1.2),
-                    font: renderer.default_font(),
-                    align_x: iced::alignment::Horizontal::Left.into(),
-                    align_y: iced::alignment::Vertical::Top,
-                    shaping: text::Shaping::Basic,
-                    wrapping: text::Wrapping::None,
-                },
-                Point::new(dialog_bounds.x + padding, y_cursor),
-                dialog_style.title_color,
-                dialog_bounds,
-            );
-            y_cursor += 28.0 + 16.0;
-        }
-
-        // Body
-        if let Some(body) = self.body {
-            renderer.fill_text(
-                Text {
-                    content: body.to_string(),
-                    bounds: Size::new(dialog_bounds.width - padding * 2.0, 200.0),
-                    size: Pixels(theme.text_size() * 0.875),
-                    line_height: text::LineHeight::Relative(1.4),
-                    font: renderer.default_font(),
-                    align_x: iced::alignment::Horizontal::Left.into(),
-                    align_y: iced::alignment::Vertical::Top,
-                    shaping: text::Shaping::Basic,
-                    wrapping: text::Wrapping::WordOrGlyph,
-                },
-                Point::new(dialog_bounds.x + padding, y_cursor),
-                dialog_style.text_color,
-                dialog_bounds,
-            );
-        }
-
-        // Action buttons
-        if self.confirm.is_some() || self.dismiss.is_some() {
-            let button_y = dialog_bounds.y + dialog_bounds.height - padding - 40.0;
-            let mut btn_x = dialog_bounds.x + dialog_bounds.width - padding;
-
-            if let Some((label, _)) = self.confirm {
-                let btn_width = (label.len() as f32 * 9.0).max(64.0);
-                btn_x -= btn_width;
-
-                let bg_color = dialog_style.title_color;
-
-                renderer.fill_quad(
-                    renderer::Quad {
-                        bounds: Rectangle {
-                            x: btn_x,
-                            y: button_y,
-                            width: btn_width,
-                            height: 40.0,
-                        },
-                        border: Border {
-                            radius: 20.0.into(),
-                            ..Border::default()
-                        },
-                        ..renderer::Quad::default()
-                    },
-                    iced::Background::Color(iced::Color {
-                        a: if self.state.confirm_pressed {
-                            0.2
-                        } else if self.state.confirm_hovered {
-                            0.15
-                        } else {
-                            0.1
-                        },
-                        ..bg_color
-                    }),
-                );
-
-                renderer.fill_text(
-                    Text {
-                        content: label.clone(),
-                        bounds: Size::new(btn_width, 40.0),
-                        size: Pixels(theme.text_size() * 0.875),
-                        line_height: text::LineHeight::Relative(1.0),
-                        font: renderer.default_font(),
-                        align_x: iced::alignment::Horizontal::Center.into(),
-                        align_y: iced::alignment::Vertical::Center,
-                        shaping: text::Shaping::Basic,
-                        wrapping: text::Wrapping::None,
-                    },
-                    Point::new(btn_x + btn_width / 2.0, button_y + 20.0),
-                    dialog_style.title_color,
-                    Rectangle {
-                        x: btn_x,
-                        y: button_y,
-                        width: btn_width,
-                        height: 40.0,
-                    },
-                );
-
-                btn_x -= 8.0;
-            }
-
-            if let Some((label, _)) = self.dismiss {
-                let btn_width = (label.len() as f32 * 9.0).max(64.0);
-                btn_x -= btn_width;
-
-                renderer.fill_text(
-                    Text {
-                        content: label.clone(),
-                        bounds: Size::new(btn_width, 40.0),
-                        size: Pixels(theme.text_size() * 0.875),
-                        line_height: text::LineHeight::Relative(1.0),
-                        font: renderer.default_font(),
-                        align_x: iced::alignment::Horizontal::Center.into(),
-                        align_y: iced::alignment::Vertical::Center,
-                        shaping: text::Shaping::Basic,
-                        wrapping: text::Wrapping::None,
-                    },
-                    Point::new(btn_x + btn_width / 2.0, button_y + 20.0),
-                    dialog_style.title_color,
-                    Rectangle {
-                        x: btn_x,
-                        y: button_y,
-                        width: btn_width,
-                        height: 40.0,
-                    },
-                );
-            }
-        }
+        // Composed card content (real widgets).
+        self.card.as_widget().draw(
+            self.card_tree,
+            renderer,
+            theme,
+            style,
+            card_layout,
+            cursor,
+            &card_bounds,
+        );
     }
 
     fn update(
@@ -526,98 +534,83 @@ where
         event: &Event,
         layout: Layout<'_>,
         cursor: mouse::Cursor,
-        _renderer: &Renderer,
-        _clipboard: &mut dyn Clipboard,
+        renderer: &Renderer,
+        clipboard: &mut dyn Clipboard,
         shell: &mut Shell<'_, Message>,
     ) {
         let bounds = layout.bounds();
-        let dialog_layout = layout.children().next().unwrap();
-        let dialog_bounds = dialog_layout.bounds();
+        let card_layout = layout.children().next().unwrap();
+        let card_bounds = card_layout.bounds();
 
-        let is_over_dialog = cursor.is_over(dialog_bounds);
-        let is_over_scrim = cursor.is_over(bounds) && !is_over_dialog;
+        // Forward events to the composed card content first so the
+        // real action buttons handle hover/press/clicks.
+        self.card.as_widget_mut().update(
+            self.card_tree,
+            event,
+            card_layout,
+            cursor,
+            renderer,
+            clipboard,
+            shell,
+            &card_bounds,
+        );
 
-        let padding = 24.0_f32;
-        let button_y = dialog_bounds.y + dialog_bounds.height - padding - 40.0;
-        let mut btn_x = dialog_bounds.x + dialog_bounds.width - padding;
+        if shell.is_event_captured() {
+            return;
+        }
 
-        let confirm_bounds = self.confirm.as_ref().map(|(label, _)| {
-            let btn_width = (label.len() as f32 * 9.0).max(64.0);
-            btn_x -= btn_width;
-            let r = Rectangle {
-                x: btn_x,
-                y: button_y,
-                width: btn_width,
-                height: 40.0,
-            };
-            btn_x -= 8.0;
-            r
-        });
-
-        let dismiss_bounds = self.dismiss.as_ref().map(|(label, _)| {
-            let btn_width = (label.len() as f32 * 9.0).max(64.0);
-            btn_x -= btn_width;
-            Rectangle {
-                x: btn_x,
-                y: button_y,
-                width: btn_width,
-                height: 40.0,
-            }
-        });
+        // Scrim press handling (clicks outside the card).
+        let is_over_card = cursor.is_over(card_bounds);
+        let is_over_scrim = cursor.is_over(bounds) && !is_over_card;
 
         match event {
-            Event::Mouse(mouse::Event::CursorMoved { .. }) => {
-                self.state.confirm_hovered =
-                    confirm_bounds.map(|b| cursor.is_over(b)).unwrap_or(false);
-                self.state.dismiss_hovered =
-                    dismiss_bounds.map(|b| cursor.is_over(b)).unwrap_or(false);
-            }
             Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) => {
-                if self.state.confirm_hovered {
-                    self.state.confirm_pressed = true;
-                } else if self.state.dismiss_hovered {
-                    self.state.dismiss_pressed = true;
-                } else if is_over_scrim {
+                if is_over_scrim {
                     self.state.scrim_pressed = true;
                 }
             }
             Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left)) => {
-                if self.state.confirm_pressed && self.state.confirm_hovered {
-                    if let Some((_, msg)) = self.confirm {
-                        shell.publish(msg.clone());
-                    }
-                } else if self.state.dismiss_pressed && self.state.dismiss_hovered {
-                    if let Some((_, msg)) = self.dismiss {
-                        shell.publish(msg.clone());
-                    }
-                } else if self.state.scrim_pressed
+                if self.state.scrim_pressed
                     && is_over_scrim
                     && let Some(msg) = self.on_scrim_press
                 {
                     shell.publish(msg.clone());
                 }
-                self.state.confirm_pressed = false;
-                self.state.dismiss_pressed = false;
                 self.state.scrim_pressed = false;
             }
             _ => {}
         }
     }
 
+    fn operate(&mut self, layout: Layout<'_>, renderer: &Renderer, operation: &mut dyn Operation) {
+        let card_layout = layout.children().next().unwrap();
+        self.card
+            .as_widget_mut()
+            .operate(self.card_tree, card_layout, renderer, operation);
+    }
+
     fn mouse_interaction(
         &self,
         layout: Layout<'_>,
         cursor: mouse::Cursor,
-        _renderer: &Renderer,
+        renderer: &Renderer,
     ) -> mouse::Interaction {
-        let dialog_layout = layout.children().next().unwrap();
-        let dialog_bounds = dialog_layout.bounds();
+        let card_layout = layout.children().next().unwrap();
+        let card_bounds = card_layout.bounds();
 
-        if self.state.confirm_hovered || self.state.dismiss_hovered {
-            mouse::Interaction::Pointer
-        } else if cursor.is_over(dialog_bounds) {
-            mouse::Interaction::default()
-        } else if cursor.is_over(layout.bounds()) {
+        let child = self.card.as_widget().mouse_interaction(
+            self.card_tree,
+            card_layout,
+            cursor,
+            &card_bounds,
+            renderer,
+        );
+        if child != mouse::Interaction::default() {
+            return child;
+        }
+
+        // Pointer over the scrim (dismiss affordance).
+        if cursor.is_over(layout.bounds()) && !cursor.is_over(card_bounds) {
             mouse::Interaction::Pointer
         } else {
             mouse::Interaction::default()
@@ -629,10 +622,11 @@ impl<'a, Message, Theme, Renderer> From<Dialog<'a, Message, Theme, Renderer>>
     for Element<'a, Message, Theme, Renderer>
 where
     Message: Clone + 'a,
-    Theme: Catalog + SpacingBase + RoundnessBase + FontSizeBase + 'a,
+    Theme: DialogTheme + 'a,
     Renderer: renderer::Renderer + text::Renderer + 'a,
 {
-    fn from(dialog: Dialog<'a, Message, Theme, Renderer>) -> Self {
+    fn from(mut dialog: Dialog<'a, Message, Theme, Renderer>) -> Self {
+        dialog.compose();
         Element::new(dialog)
     }
 }

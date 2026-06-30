@@ -15,10 +15,6 @@ pub struct Style {
     pub border: Border,
     /// Shadow (elevation) of the dialog container.
     pub shadow: Shadow,
-    /// Title text color.
-    pub title_color: Color,
-    /// Body text color.
-    pub text_color: Color,
 }
 
 /// A function that returns a [`Style`] for a given theme.
@@ -61,7 +57,5 @@ pub fn default(theme: &Theme) -> Style {
             ..Border::default()
         },
         shadow: theme.shadow(Elevation::sx(1.0), ShadowDir::Down),
-        title_color: palette.background.base.text,
-        text_color: palette.background.weak.text,
     }
 }
