@@ -173,7 +173,11 @@ impl Theme {
     /// The resolved elevation is used as the shadow's blur radius; the
     /// offset is half that magnitude along `direction`. The shadow
     /// color is a translucent black shared by every elevated `iced_ui`
-    /// widget. A zero elevation yields a zeroed (invisible) shadow.
+    /// widget; its opacity adapts to the active palette so the shadow
+    /// stays visible on dark backgrounds (where a faint black cast
+    /// would otherwise disappear) while keeping the lighter cast on
+    /// light backgrounds. A zero elevation yields a zeroed (invisible)
+    /// shadow.
     pub fn shadow(&self, elevation: scale::Elevation, direction: ShadowDir) -> iced::Shadow {
         let blur = self.elevation(elevation);
         let distance = blur / 2.0;
@@ -184,9 +188,18 @@ impl Theme {
             ShadowDir::Right => iced::Vector::new(distance, 0.0),
         };
 
+        // A translucent black cast vanishes on dark surfaces, so deepen
+        // the opacity when the palette's background is dark. Light
+        // palettes keep the original, subtler value.
+        let alpha = if palette::is_dark(self.palette().background) {
+            0.6
+        } else {
+            0.3
+        };
+
         iced::Shadow {
             color: iced::Color {
-                a: 0.3,
+                a: alpha,
                 ..iced::Color::BLACK
             },
             offset,

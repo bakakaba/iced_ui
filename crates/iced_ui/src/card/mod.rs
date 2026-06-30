@@ -148,7 +148,7 @@ where
             height: size.height.fluid(),
             max_width: f32::INFINITY,
             max_height: f32::INFINITY,
-            padding: PaddingSource::from(crate::Space::sx(1.0)),
+            padding: PaddingSource::from(crate::Space::sx(2.0)),
             variant: Variant::Flat,
             background: None,
             background_image: None,
@@ -184,8 +184,8 @@ where
     }
 
     /// Sets the inner padding of the [`Card`]. Defaults to
-    /// [`Space::sx(1.0)`](crate::Space::sx), which resolves to
-    /// `8.0` logical pixels at the default [`spacing`].
+    /// [`Space::sx(2.0)`](crate::Space::sx), which resolves to
+    /// `16.0` logical pixels at the default [`spacing`].
     ///
     /// Accepts a [`Space`](crate::Space), an [`iced::Padding`] or a
     /// raw `[f32; 2]` (absolute).
