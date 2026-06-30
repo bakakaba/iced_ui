@@ -1,15 +1,22 @@
 //! A checkbox whose behavior is driven by the type of its value.
 //!
 //! The value passed to [`Checkbox::new`] decides whether the checkbox
-//! is a plain two-state control or a tri-state control that the user
-//! can cycle into an indeterminate ("unset") value:
+//! is a plain two-state control or a tri-state control that can also
+//! represent an indeterminate ("unset") value:
 //!
 //! - A [`bool`] value produces a binary checkbox. Clicking toggles
 //!   `false` ⇄ `true`; the indeterminate state is unreachable.
-//! - An [`Option<bool>`] value produces a tri-state checkbox. Clicking
-//!   cycles `None` → `Some(true)` → `Some(false)` → `None`, so the
-//!   user can select the indeterminate (`None`) value. This is useful
-//!   for a third "unset"/"any" choice, e.g. a tri-state filter.
+//! - An [`Option<bool>`] value produces a tri-state checkbox that can
+//!   *display* the indeterminate (`None`) value. It has two modes,
+//!   selected via [`Checkbox::indeterminate`]:
+//!   - **Read-only (default):** the app may set `None`, but a click
+//!     only moves between checked and unchecked — the user can never
+//!     click *into* `None`. A click while indeterminate selects
+//!     (`Some(true)`). Useful for a "select all" parent that reflects
+//!     mixed children.
+//!   - **Cyclable** (`.indeterminate(true)`): clicking cycles
+//!     `None` → `Some(true)` → `Some(false)` → `None`, so the user
+//!     can select the indeterminate value, e.g. a tri-state filter.
 //!
 //! In both cases the closure registered with [`Checkbox::on_toggle`]
 //! receives the *next* value, expressed in the same type that was
@@ -32,10 +39,17 @@
 //!     .label("Remember me")
 //!     .on_toggle(Message::Remember);
 //!
-//! // Tri-state checkbox — `on_toggle` receives an `Option<bool>` and
-//! // the user can cycle to the indeterminate (`None`) value.
+//! // Tri-state checkbox, read-only indeterminate (default): the
+//! // app can show `None`, but clicking only toggles checked/unchecked.
+//! let select_all = Checkbox::new(None)
+//!     .label("Select all")
+//!     .on_toggle(Message::SelectAll);
+//!
+//! // Tri-state checkbox, cyclable indeterminate: the user can click
+//! // into the `None` ("any") value.
 //! let filter = Checkbox::new(None)
 //!     .label("Any")
+//!     .indeterminate(true)
 //!     .on_toggle(Message::Filter);
 //! ```
 
@@ -95,8 +109,9 @@ mod sealed {
 ///
 /// The implementing type determines the checkbox's behavior: a
 /// [`bool`] yields a binary control, while an [`Option<bool>`] yields
-/// a tri-state control whose indeterminate (`None`) value is
-/// reachable by clicking.
+/// a tri-state control that can *display* the indeterminate (`None`)
+/// value. Whether the user can click *into* `None` is controlled by
+/// [`Checkbox::indeterminate`].
 ///
 /// This trait is sealed and cannot be implemented outside this crate;
 /// only [`bool`] and [`Option<bool>`] are valid value types.
@@ -104,8 +119,20 @@ pub trait Value: sealed::Sealed + Copy {
     /// Maps this value to its display-facing [`State`].
     fn state(self) -> State;
 
-    /// Returns the value produced by clicking the checkbox.
-    fn next(self) -> Self;
+    /// Returns the value produced by clicking when the indeterminate
+    /// state is *read-only* (the default).
+    ///
+    /// The user may move between checked and unchecked but can never
+    /// click *into* the indeterminate value; a click while
+    /// indeterminate selects (checked).
+    fn toggled(self) -> Self;
+
+    /// Returns the value produced by clicking when the indeterminate
+    /// state is *cyclable*.
+    ///
+    /// The user can reach the indeterminate value by clicking, cycling
+    /// indeterminate → checked → unchecked → indeterminate.
+    fn cycled(self) -> Self;
 }
 
 impl Value for bool {
@@ -117,7 +144,13 @@ impl Value for bool {
         }
     }
 
-    fn next(self) -> Self {
+    fn toggled(self) -> Self {
+        !self
+    }
+
+    fn cycled(self) -> Self {
+        // A binary checkbox has no indeterminate state to cycle into,
+        // so cycling is identical to toggling.
         !self
     }
 }
@@ -131,7 +164,18 @@ impl Value for Option<bool> {
         }
     }
 
-    fn next(self) -> Self {
+    fn toggled(self) -> Self {
+        // Read-only indeterminate: a click never returns to `None`. A
+        // click while indeterminate (`None`) selects (`Some(true)`);
+        // otherwise toggle checked/unchecked.
+        match self {
+            None | Some(false) => Some(true),
+            Some(true) => Some(false),
+        }
+    }
+
+    fn cycled(self) -> Self {
+        // Cyclable indeterminate:
         // Indeterminate -> Checked -> Unchecked -> Indeterminate.
         match self {
             None => Some(true),
@@ -185,6 +229,7 @@ where
     on_toggle: Option<Box<dyn Fn(V) -> Message + 'a>>,
     size: f32,
     enabled: bool,
+    cycle_indeterminate: bool,
     class: Theme::Class<'a>,
 }
 
@@ -197,8 +242,11 @@ where
     /// Creates a checkbox with the given value.
     ///
     /// Passing a [`bool`] yields a binary checkbox; passing an
-    /// [`Option<bool>`] yields a tri-state checkbox whose
-    /// indeterminate (`None`) value is reachable by clicking.
+    /// [`Option<bool>`] yields a tri-state checkbox that can *display*
+    /// the indeterminate (`None`) value. By default a click can only
+    /// move between checked and unchecked (the indeterminate state is
+    /// read-only); call [`Checkbox::indeterminate`] to let the user
+    /// cycle into `None`.
     pub fn new(value: V) -> Self {
         Self {
             value,
@@ -206,6 +254,7 @@ where
             on_toggle: None,
             size: DEFAULT_BOX_SIZE,
             enabled: true,
+            cycle_indeterminate: false,
             class: Theme::default(),
         }
     }
@@ -253,6 +302,32 @@ where
 
     fn is_interactive(&self) -> bool {
         self.enabled && self.on_toggle.is_some()
+    }
+}
+
+impl<'a, Message, Theme, Renderer> Checkbox<'a, Option<bool>, Message, Theme, Renderer>
+where
+    Theme: Catalog,
+    Renderer: renderer::Renderer,
+{
+    /// Controls whether the user can click *into* the indeterminate
+    /// (`None`) value.
+    ///
+    /// This builder is only available on tri-state
+    /// (`Checkbox<Option<bool>>`) checkboxes; a binary
+    /// (`Checkbox<bool>`) checkbox has no indeterminate state, so the
+    /// method does not exist for it.
+    ///
+    /// - `false` (the default) — the indeterminate state is
+    ///   *read-only*: the app may still set it, but a click only moves
+    ///   between checked and unchecked. A click while indeterminate
+    ///   selects (`Some(true)`).
+    /// - `true` — the indeterminate state is *cyclable*: clicking
+    ///   cycles `None` → `Some(true)` → `Some(false)` → `None`, so the
+    ///   user can reach the indeterminate value.
+    pub fn indeterminate(mut self, cycle: bool) -> Self {
+        self.cycle_indeterminate = cycle;
+        self
     }
 }
 
@@ -470,7 +545,12 @@ where
                     && is_over
                     && let Some(f) = &self.on_toggle
                 {
-                    shell.publish(f(self.value.next()));
+                    let next = if self.cycle_indeterminate {
+                        self.value.cycled()
+                    } else {
+                        self.value.toggled()
+                    };
+                    shell.publish(f(next));
                 }
                 internal.is_pressed = false;
             }

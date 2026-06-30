@@ -184,12 +184,14 @@ fn binary_checkbox_toggles_bool() -> Result<(), Error> {
 
 #[test]
 fn tristate_checkbox_can_cycle_into_indeterminate() -> Result<(), Error> {
-    // An `Option<bool>` checkbox in the `Some(false)` value cycles to
-    // the indeterminate (`None`) value when clicked, proving the user
-    // can reach indeterminate.
+    // An `Option<bool>` checkbox with `.indeterminate(true)` in the
+    // `Some(false)` value cycles to the indeterminate (`None`) value
+    // when clicked, proving the user can reach indeterminate in the
+    // cyclable mode.
     let element = row![
         Checkbox::new(Some(false))
             .label(text("Any"))
+            .indeterminate(true)
             .on_toggle(Message::OptToggled)
     ]
     .padding(20);
@@ -201,6 +203,57 @@ fn tristate_checkbox_can_cycle_into_indeterminate() -> Result<(), Error> {
     assert!(
         messages.contains(&Message::OptToggled(None)),
         "expected OptToggled(None) in {:?}",
+        messages
+    );
+    Ok(())
+}
+
+#[test]
+fn readonly_indeterminate_click_selects_checked() -> Result<(), Error> {
+    // The default (read-only) tri-state checkbox starts indeterminate
+    // (`None`); a click selects (`Some(true)`) rather than cycling.
+    let element = row![
+        Checkbox::new(None)
+            .label(text("Select all"))
+            .on_toggle(Message::OptToggled)
+    ]
+    .padding(20);
+
+    let mut sim = build(element, DEFAULT_SIZE);
+    sim.click("Select all")?;
+
+    let messages = sim.into_messages().collect::<Vec<_>>();
+    assert!(
+        messages.contains(&Message::OptToggled(Some(true))),
+        "expected OptToggled(Some(true)) in {:?}",
+        messages
+    );
+    Ok(())
+}
+
+#[test]
+fn readonly_indeterminate_never_returns_to_indeterminate() -> Result<(), Error> {
+    // In the default (read-only) mode, a click from `Some(false)` moves
+    // to `Some(true)` rather than to the indeterminate (`None`) value.
+    let element = row![
+        Checkbox::new(Some(false))
+            .label(text("Select all"))
+            .on_toggle(Message::OptToggled)
+    ]
+    .padding(20);
+
+    let mut sim = build(element, DEFAULT_SIZE);
+    sim.click("Select all")?;
+
+    let messages = sim.into_messages().collect::<Vec<_>>();
+    assert!(
+        messages.contains(&Message::OptToggled(Some(true))),
+        "expected OptToggled(Some(true)) in {:?}",
+        messages
+    );
+    assert!(
+        !messages.contains(&Message::OptToggled(None)),
+        "read-only mode must never emit OptToggled(None), got {:?}",
         messages
     );
     Ok(())
