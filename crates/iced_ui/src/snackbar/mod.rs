@@ -69,7 +69,7 @@ use iced::window;
 use iced::{Color, Element, Event, Length, Pixels, Point, Rectangle, Size, Vector};
 
 use crate::position::Position;
-use crate::{FontSizeBase, RoundnessBase, Space, SpacingBase};
+use crate::{FontSizeBase, Roundness, RoundnessBase, Space, SpacingBase};
 
 /// Height of each notification bar in logical pixels.
 const BAR_HEIGHT: f32 = 48.0;
@@ -109,6 +109,7 @@ where
     on_action: Option<Box<dyn Fn(NotificationId, usize) -> Message + 'a>>,
     anchor: Position,
     max: Option<usize>,
+    roundness: Option<Roundness>,
     class: Theme::Class<'a>,
 }
 
@@ -126,6 +127,7 @@ where
             on_action: None,
             anchor: Position::BottomRight,
             max: None,
+            roundness: None,
             class: Theme::default(),
         }
     }
@@ -179,6 +181,15 @@ where
     /// Sets the style class.
     pub fn style(mut self, class: impl Into<Theme::Class<'a>>) -> Self {
         self.class = class.into();
+        self
+    }
+
+    /// Overrides the corner roundness of the notification cards,
+    /// bypassing the theme's default for this widget. Accepts a
+    /// [`Roundness`] token: [`Roundness::sx`] scales the theme's
+    /// roundness base, [`Roundness::px`] sets an absolute radius.
+    pub fn roundness(mut self, roundness: Roundness) -> Self {
+        self.roundness = Some(roundness);
         self
     }
 
@@ -449,6 +460,7 @@ where
             anchor: self.anchor,
             state: state.downcast_mut(),
             style_fn: &self.class,
+            roundness: self.roundness,
             host_bounds,
             _renderer: std::marker::PhantomData,
         }));
@@ -474,6 +486,7 @@ where
     anchor: Position,
     state: &'b mut SnackbarState,
     style_fn: &'b <Theme as Catalog>::Class<'a>,
+    roundness: Option<Roundness>,
     host_bounds: Rectangle,
     _renderer: std::marker::PhantomData<Renderer>,
 }
@@ -641,7 +654,12 @@ where
 
         for (notif, bar_layout) in self.notifications.iter().rev().zip(layout.children()) {
             let bar_bounds = bar_layout.bounds();
-            let snack_style = <Theme as Catalog>::style(theme, self.style_fn, notif.severity);
+            let mut snack_style = <Theme as Catalog>::style(theme, self.style_fn, notif.severity);
+
+            // Apply the roundness override if set.
+            if let Some(r) = self.roundness {
+                snack_style.border.radius = r.resolve(RoundnessBase::roundness(theme)).into();
+            }
 
             // Bar background
             renderer.fill_quad(

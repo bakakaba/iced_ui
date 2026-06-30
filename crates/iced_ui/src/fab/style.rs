@@ -2,7 +2,7 @@
 
 use iced::{Background, Border, Color, Shadow};
 
-use crate::{Elevation, Roundness, ShadowDir, Theme};
+use crate::{Elevation, ShadowDir, Theme};
 
 /// The size variant of a FAB.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
@@ -97,15 +97,14 @@ impl Catalog for Theme {
 /// with the lowered flag or interaction status.
 pub fn default(theme: &Theme, _lowered: bool, _status: Status) -> Style {
     let palette = theme.extended_palette();
-    let radius = theme.radius(Roundness::sx(4.0));
 
     Style {
         background: Background::Color(palette.primary.weak.color),
         icon_color: palette.primary.base.color,
-        border: Border {
-            radius: radius.into(),
-            ..Border::default()
-        },
+        // The corner radius is resolved by the widget at draw time
+        // (fully rounded by default, or a `.roundness(..)` override),
+        // so it is left at the default here.
+        border: Border::default(),
         shadow: theme.shadow(Elevation::sx(1.0), ShadowDir::Down),
     }
 }

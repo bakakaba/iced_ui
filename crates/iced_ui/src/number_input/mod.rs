@@ -64,6 +64,7 @@ where
     width: Length,
     precision: Option<usize>,
     variant: Variant,
+    roundness: Option<crate::Roundness>,
 }
 
 impl<'a, T, Message> NumberInput<'a, T, Message>
@@ -81,6 +82,7 @@ where
             width: Length::Fixed(120.0),
             precision: None,
             variant: Variant::default(),
+            roundness: None,
         }
     }
 
@@ -123,6 +125,16 @@ where
     /// Sets the visual variant (outlined or filled).
     pub fn variant(mut self, variant: Variant) -> Self {
         self.variant = variant;
+        self
+    }
+
+    /// Overrides the corner roundness, bypassing the theme's default
+    /// for this widget. Accepts a [`Roundness`](crate::Roundness)
+    /// token: [`Roundness::sx`](crate::Roundness::sx) scales the
+    /// theme's roundness base, [`Roundness::px`](crate::Roundness::px)
+    /// sets an absolute radius.
+    pub fn roundness(mut self, roundness: crate::Roundness) -> Self {
+        self.roundness = Some(roundness);
         self
     }
 
@@ -516,7 +528,10 @@ where
             .is_focused();
 
         let palette = theme.extended_palette();
-        let roundness = theme.radius(crate::Roundness::sx(1.0));
+        let roundness = match self.roundness {
+            Some(r) => theme.radius(r),
+            None => theme.radius(crate::Roundness::sx(1.0)),
+        };
 
         // Compute outer container style
         let (bg, border_color, border_width) = if !state.is_valid {

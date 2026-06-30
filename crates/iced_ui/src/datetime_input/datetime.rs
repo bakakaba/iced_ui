@@ -80,6 +80,17 @@ impl<'a, Message> DateTimeInput<'a, Message> {
         self
     }
 
+    /// Overrides the corner roundness of the input field, bypassing the
+    /// theme's default for this widget. Accepts a
+    /// [`Roundness`](crate::Roundness) token:
+    /// [`Roundness::sx`](crate::Roundness::sx) scales the theme's
+    /// roundness base, [`Roundness::px`](crate::Roundness::px) sets an
+    /// absolute radius.
+    pub fn roundness(mut self, roundness: crate::Roundness) -> Self {
+        self.inner = self.inner.roundness(roundness);
+        self
+    }
+
     /// Sets the style of the picker popup.
     pub fn style(mut self, style: impl Fn(&Theme) -> Style + 'a) -> Self {
         self.inner = self.inner.style(Box::new(style));

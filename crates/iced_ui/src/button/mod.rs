@@ -34,7 +34,7 @@ use iced::advanced::{Clipboard, Shell};
 use iced::mouse;
 use iced::{Element, Event, Length, Rectangle, Size, window};
 
-use crate::{RoundnessBase, SpacingBase};
+use crate::{Roundness, RoundnessBase, SpacingBase};
 
 /// Internal state tracking press/hover and last-rendered status.
 #[derive(Debug, Clone, Copy, Default)]
@@ -59,6 +59,7 @@ where
     enabled: bool,
     focused: bool,
     width: Length,
+    roundness: Option<Roundness>,
     class: Theme::Class<'a>,
 }
 
@@ -78,6 +79,7 @@ where
             enabled: true,
             focused: false,
             width: Length::Shrink,
+            roundness: None,
             class: Theme::default(),
         }
     }
@@ -128,6 +130,15 @@ where
     /// Sets the width of the button. Defaults to [`Length::Shrink`].
     pub fn width(mut self, width: impl Into<Length>) -> Self {
         self.width = width.into();
+        self
+    }
+
+    /// Overrides the corner roundness, bypassing the theme's default
+    /// for this widget. Accepts a [`Roundness`] token:
+    /// [`Roundness::sx`] scales the theme's roundness base,
+    /// [`Roundness::px`] sets an absolute radius.
+    pub fn roundness(mut self, roundness: Roundness) -> Self {
+        self.roundness = Some(roundness);
         self
     }
 
@@ -242,11 +253,17 @@ where
             status,
         );
 
+        // Apply the roundness override if set.
+        let mut border = btn_style.border;
+        if let Some(r) = self.roundness {
+            border.radius = r.resolve(RoundnessBase::roundness(theme)).into();
+        }
+
         // Draw background.
         renderer.fill_quad(
             renderer::Quad {
                 bounds,
-                border: btn_style.border,
+                border,
                 shadow: btn_style.shadow,
                 ..renderer::Quad::default()
             },

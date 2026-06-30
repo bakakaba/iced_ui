@@ -31,7 +31,7 @@ use iced::advanced::{Clipboard, Shell};
 use iced::mouse;
 use iced::{Border, Element, Event, Length, Pixels, Point, Rectangle, Size, Vector};
 
-use crate::{FontSizeBase, RoundnessBase, SpacingBase};
+use crate::{FontSizeBase, Roundness, RoundnessBase, SpacingBase};
 
 /// Maximum width of the dialog container.
 const MAX_WIDTH: f32 = 560.0;
@@ -52,6 +52,7 @@ where
     dismiss: Option<(String, Message)>,
     on_scrim_press: Option<Message>,
     open: bool,
+    roundness: Option<Roundness>,
     class: Theme::Class<'a>,
 }
 
@@ -70,6 +71,7 @@ where
             dismiss: None,
             on_scrim_press: None,
             open: false,
+            roundness: None,
             class: Theme::default(),
         }
     }
@@ -108,6 +110,15 @@ where
     /// Controls whether the dialog is visible.
     pub fn open(mut self, open: bool) -> Self {
         self.open = open;
+        self
+    }
+
+    /// Overrides the corner roundness of the dialog card, bypassing the
+    /// theme's default for this widget. Accepts a [`Roundness`] token:
+    /// [`Roundness::sx`] scales the theme's roundness base,
+    /// [`Roundness::px`] sets an absolute radius.
+    pub fn roundness(mut self, roundness: Roundness) -> Self {
+        self.roundness = Some(roundness);
         self
     }
 
@@ -271,6 +282,7 @@ where
             on_scrim_press: self.on_scrim_press.as_ref(),
             state: tree.state.downcast_mut(),
             style_fn: &self.class,
+            roundness: self.roundness,
             viewport: *viewport,
             _renderer: std::marker::PhantomData,
         })))
@@ -290,6 +302,7 @@ where
     on_scrim_press: Option<&'b Message>,
     state: &'b mut DialogState,
     style_fn: &'b <Theme as Catalog>::Class<'a>,
+    roundness: Option<Roundness>,
     viewport: Rectangle,
     _renderer: std::marker::PhantomData<Renderer>,
 }
@@ -343,6 +356,13 @@ where
         let dialog_style = <Theme as Catalog>::style(theme, self.style_fn);
         let bounds = layout.bounds();
 
+        // Resolve the dialog card border, applying the roundness
+        // override when one is set.
+        let mut card_border = dialog_style.border;
+        if let Some(r) = self.roundness {
+            card_border.radius = r.resolve(RoundnessBase::roundness(theme)).into();
+        }
+
         // Scrim
         renderer.fill_quad(
             renderer::Quad {
@@ -359,7 +379,7 @@ where
         renderer.fill_quad(
             renderer::Quad {
                 bounds: dialog_bounds,
-                border: dialog_style.border,
+                border: card_border,
                 shadow: dialog_style.shadow,
                 ..renderer::Quad::default()
             },

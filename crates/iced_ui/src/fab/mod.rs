@@ -27,7 +27,7 @@ use iced::advanced::{Clipboard, Shell};
 use iced::mouse;
 use iced::{Element, Event, Length, Rectangle, Size};
 
-use crate::{RoundnessBase, SpacingBase};
+use crate::{Roundness, RoundnessBase, SpacingBase};
 
 /// The height of an extended FAB.
 const EXTENDED_HEIGHT: f32 = 56.0;
@@ -50,6 +50,7 @@ where
     on_press: Option<Message>,
     fab_size: FabSize,
     lowered: bool,
+    roundness: Option<Roundness>,
     class: Theme::Class<'a>,
 }
 
@@ -66,6 +67,7 @@ where
             on_press: None,
             fab_size: FabSize::default(),
             lowered: false,
+            roundness: None,
             class: Theme::default(),
         }
     }
@@ -85,6 +87,15 @@ where
     /// Reduces the elevation (shadow) of the FAB.
     pub fn lowered(mut self) -> Self {
         self.lowered = true;
+        self
+    }
+
+    /// Overrides the corner roundness, bypassing the FAB's default
+    /// fully-rounded (circular / pill) shape. Accepts a [`Roundness`]
+    /// token: [`Roundness::sx`] scales the theme's roundness base,
+    /// [`Roundness::px`] sets an absolute radius.
+    pub fn roundness(mut self, roundness: Roundness) -> Self {
+        self.roundness = Some(roundness);
         self
     }
 
@@ -233,11 +244,21 @@ where
 
         let fab_style = Catalog::style(theme, &self.class, self.lowered, status);
 
+        // Resolve the corner radius: fully rounded (circle / pill) by
+        // default, or the themed override when one is set.
+        let radius = match self.roundness {
+            Some(r) => r.resolve(RoundnessBase::roundness(theme)),
+            None => bounds.height / 2.0,
+        };
+
         // Draw background.
         renderer.fill_quad(
             renderer::Quad {
                 bounds,
-                border: fab_style.border,
+                border: iced::Border {
+                    radius: radius.into(),
+                    ..fab_style.border
+                },
                 shadow: fab_style.shadow,
                 ..renderer::Quad::default()
             },

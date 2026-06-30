@@ -20,7 +20,7 @@ pub use style::{Catalog, Status, Style, StyleFn, Variant, filled, outlined};
 use iced::widget::{container, row, text_input};
 use iced::{Element, Length};
 
-use crate::Theme;
+use crate::{Roundness, Theme};
 
 /// A themed text input with optional leading/trailing elements.
 ///
@@ -37,6 +37,7 @@ pub struct TextInput<'a, Message> {
     leading: Option<Element<'a, Message, Theme>>,
     trailing: Option<Element<'a, Message, Theme>>,
     variant: Variant,
+    roundness: Option<Roundness>,
 }
 
 impl<'a, Message: Clone + 'a> TextInput<'a, Message> {
@@ -53,6 +54,7 @@ impl<'a, Message: Clone + 'a> TextInput<'a, Message> {
             leading: None,
             trailing: None,
             variant: Variant::default(),
+            roundness: None,
         }
     }
 
@@ -99,11 +101,21 @@ impl<'a, Message: Clone + 'a> TextInput<'a, Message> {
         self.variant = variant;
         self
     }
+
+    /// Overrides the corner roundness, bypassing the theme's default
+    /// for this widget. Accepts a [`Roundness`] token:
+    /// [`Roundness::sx`] scales the theme's roundness base,
+    /// [`Roundness::px`] sets an absolute radius.
+    pub fn roundness(mut self, roundness: Roundness) -> Self {
+        self.roundness = Some(roundness);
+        self
+    }
 }
 
 impl<'a, Message: Clone + 'a> From<TextInput<'a, Message>> for Element<'a, Message, Theme> {
     fn from(input: TextInput<'a, Message>) -> Self {
         let variant = input.variant;
+        let roundness = input.roundness;
 
         // Build the inner iced text_input
         let mut inner = text_input(input.placeholder, input.value)
@@ -165,9 +177,13 @@ impl<'a, Message: Clone + 'a> From<TextInput<'a, Message>> for Element<'a, Messa
                     Variant::Outlined => outlined(theme, Status::Active),
                     Variant::Filled => filled(theme, Status::Active),
                 };
+                let mut border = style.border;
+                if let Some(r) = roundness {
+                    border.radius = theme.radius(r).into();
+                }
                 iced::widget::container::Style {
                     background: Some(style.background),
-                    border: style.border,
+                    border,
                     ..Default::default()
                 }
             })

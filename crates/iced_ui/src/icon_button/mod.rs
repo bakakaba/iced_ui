@@ -32,7 +32,7 @@ use iced::advanced::{Clipboard, Shell};
 use iced::mouse;
 use iced::{Element, Event, Length, Padding, Rectangle, Size};
 
-use crate::{RoundnessBase, SpacingBase};
+use crate::{Roundness, RoundnessBase, SpacingBase};
 
 /// Default icon button size (logical pixels).
 const DEFAULT_SIZE: f32 = 40.0;
@@ -55,6 +55,7 @@ where
     variant: Variant,
     toggled: bool,
     size: f32,
+    roundness: Option<Roundness>,
     class: Theme::Class<'a>,
 }
 
@@ -71,6 +72,7 @@ where
             variant: Variant::default(),
             toggled: false,
             size: DEFAULT_SIZE,
+            roundness: None,
             class: Theme::default(),
         }
     }
@@ -90,6 +92,15 @@ where
     /// Sets the button size (width and height) in logical pixels.
     pub fn size(mut self, size: f32) -> Self {
         self.size = size;
+        self
+    }
+
+    /// Overrides the corner roundness, bypassing the icon button's
+    /// default fully-rounded (circular) shape. Accepts a [`Roundness`]
+    /// token: [`Roundness::sx`] scales the theme's roundness base,
+    /// [`Roundness::px`] sets an absolute radius.
+    pub fn roundness(mut self, roundness: Roundness) -> Self {
+        self.roundness = Some(roundness);
         self
     }
 
@@ -195,7 +206,16 @@ where
             Status::Active
         };
 
-        let button_style = Catalog::style(theme, &self.class, self.variant, status, self.toggled);
+        let mut button_style =
+            Catalog::style(theme, &self.class, self.variant, status, self.toggled);
+
+        // Resolve the corner radius: fully rounded (circle) by default,
+        // or the themed override when one is set.
+        let radius = match self.roundness {
+            Some(r) => r.resolve(RoundnessBase::roundness(theme)),
+            None => bounds.height / 2.0,
+        };
+        button_style.border.radius = radius.into();
 
         // Draw the button background.
         if button_style.background.is_some() || button_style.border.width > 0.0 {

@@ -13,6 +13,7 @@ use iced::{Border, Color, Event, Font, Padding, Pixels, Point, Rectangle, Size, 
 use super::State;
 use super::item::{Entry, Menu};
 use super::style::{Catalog, Style};
+use crate::RoundnessBase;
 
 /// Layout metrics derived from the active [`Style`] and widget
 /// configuration.
@@ -71,6 +72,7 @@ where
     pub(super) metrics: Metrics,
     pub(super) font: Font,
     pub(super) style_fn: &'b <Theme as Catalog>::Class<'a>,
+    pub(super) roundness: Option<crate::Roundness>,
     pub(super) _renderer: std::marker::PhantomData<Renderer>,
 }
 
@@ -78,7 +80,7 @@ impl<Message, Theme, Renderer> Overlay<Message, Theme, Renderer>
     for MenuOverlay<'_, '_, Message, Theme, Renderer>
 where
     Message: Clone,
-    Theme: Catalog,
+    Theme: Catalog + RoundnessBase,
     Renderer: text::Renderer<Font = Font>,
 {
     fn layout(&mut self, renderer: &Renderer, bounds: Size) -> layout::Node {
@@ -188,7 +190,12 @@ where
         let Some(path) = self.state.open_path.as_ref() else {
             return;
         };
-        let style = theme.style(self.style_fn);
+        let mut style = theme.style(self.style_fn);
+
+        // Apply the roundness override to the dropdown container if set.
+        if let Some(r) = self.roundness {
+            style.menu_border.radius = r.resolve(RoundnessBase::roundness(theme)).into();
+        }
 
         let mut current_menu: &Menu<Message> = &self.menus[path[0]];
         for (depth, child_layout) in layout.children().enumerate() {

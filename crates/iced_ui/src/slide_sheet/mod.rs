@@ -34,7 +34,7 @@ use iced::advanced::{Clipboard, Shell};
 use iced::mouse;
 use iced::{Color, Element, Event, Length, Pixels, Point, Rectangle, Size, Vector};
 
-use crate::{FontSizeBase, RoundnessBase, Space, SpacingBase};
+use crate::{FontSizeBase, Roundness, RoundnessBase, Space, SpacingBase};
 
 /// Length of the drag handle pill along its major axis (logical pixels).
 const HANDLE_LENGTH: f32 = 32.0;
@@ -128,6 +128,7 @@ where
     drag_handle: bool,
     size: f32,
     min_size: f32,
+    roundness: Option<Roundness>,
     class: Theme::Class<'a>,
 }
 
@@ -152,6 +153,7 @@ where
             drag_handle: true,
             size: 0.5,
             min_size: DEFAULT_MIN_SIZE,
+            roundness: None,
             class: Theme::default(),
         }
     }
@@ -211,6 +213,17 @@ where
     /// Sets the style class.
     pub fn style(mut self, class: impl Into<Theme::Class<'a>>) -> Self {
         self.class = class.into();
+        self
+    }
+
+    /// Overrides the corner roundness of the sheet, bypassing the
+    /// theme's default for this widget. The corners facing away from
+    /// the anchor edge are rounded; the override is applied before that
+    /// anchor-specific flattening. Accepts a [`Roundness`] token:
+    /// [`Roundness::sx`] scales the theme's roundness base,
+    /// [`Roundness::px`] sets an absolute radius.
+    pub fn roundness(mut self, roundness: Roundness) -> Self {
+        self.roundness = Some(roundness);
         self
     }
 }
@@ -374,6 +387,7 @@ where
             min_size: self.min_size,
             state: tree.state.downcast_mut(),
             style_fn: &self.class,
+            roundness: self.roundness,
             host_bounds,
             _renderer: std::marker::PhantomData,
         })))
@@ -395,6 +409,7 @@ where
     min_size: f32,
     state: &'b mut SheetState,
     style_fn: &'b <Theme as Catalog>::Class<'a>,
+    roundness: Option<Roundness>,
     host_bounds: Rectangle,
     _renderer: std::marker::PhantomData<Renderer>,
 }
@@ -532,6 +547,12 @@ where
     ) {
         let mut sheet_style = <Theme as Catalog>::style(theme, self.style_fn);
         let fraction = self.effective_size();
+
+        // Apply the roundness override if set, before the anchor-specific
+        // corner flattening below.
+        if let Some(r) = self.roundness {
+            sheet_style.border.radius = r.resolve(RoundnessBase::roundness(theme)).into();
+        }
 
         // Apply anchor-specific border radius and shadow direction.
         // The style produced a downward shadow; re-orient its offset to

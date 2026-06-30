@@ -36,7 +36,7 @@ use iced::advanced::{Clipboard, Shell};
 use iced::mouse;
 use iced::{Border, Element, Event, Length, Pixels, Point, Rectangle, Size, Vector};
 
-use crate::{FontSizeBase, RoundnessBase, SpacingBase};
+use crate::{FontSizeBase, Roundness, RoundnessBase, SpacingBase};
 
 /// Width of the navigation drawer panel (MD3 spec: 360px).
 const DRAWER_WIDTH: f32 = 360.0;
@@ -121,6 +121,7 @@ where
     expanded: bool,
     on_dismiss: Option<Message>,
     on_select: Option<Box<dyn Fn(usize) -> Message + 'a>>,
+    roundness: Option<Roundness>,
     class: Theme::Class<'a>,
 }
 
@@ -139,6 +140,7 @@ where
             expanded: false,
             on_dismiss: None,
             on_select: None,
+            roundness: None,
             class: Theme::default(),
         }
     }
@@ -184,6 +186,17 @@ where
     /// Sets the style class.
     pub fn style(mut self, class: impl Into<Theme::Class<'a>>) -> Self {
         self.class = class.into();
+        self
+    }
+
+    /// Overrides the corner roundness of the drawer panel, bypassing
+    /// the theme's default for this widget. The drawer rounds only its
+    /// trailing (right) corners; the override is applied to those same
+    /// corners. Accepts a [`Roundness`] token: [`Roundness::sx`] scales
+    /// the theme's roundness base, [`Roundness::px`] sets an absolute
+    /// radius.
+    pub fn roundness(mut self, roundness: Roundness) -> Self {
+        self.roundness = Some(roundness);
         self
     }
 }
@@ -364,6 +377,7 @@ where
             state: tree.state.downcast_mut(),
             icon_trees: &tree.children[1..],
             style_fn: &self.class,
+            roundness: self.roundness,
             viewport: *viewport,
             _renderer: std::marker::PhantomData,
         })))
@@ -383,6 +397,7 @@ where
     state: &'b mut DrawerState,
     icon_trees: &'b [Tree],
     style_fn: &'b <Theme as Catalog>::Class<'a>,
+    roundness: Option<Roundness>,
     viewport: Rectangle,
     _renderer: std::marker::PhantomData<Renderer>,
 }
@@ -451,8 +466,20 @@ where
         layout: Layout<'_>,
         cursor: mouse::Cursor,
     ) {
-        let drawer_style = <Theme as Catalog>::style(theme, self.style_fn);
+        let mut drawer_style = <Theme as Catalog>::style(theme, self.style_fn);
         let bounds = layout.bounds();
+
+        // Apply the roundness override if set, preserving the drawer's
+        // trailing-corner-only rounding.
+        if let Some(r) = self.roundness {
+            let radius = r.resolve(RoundnessBase::roundness(theme));
+            drawer_style.border.radius = iced::border::Radius {
+                top_left: 0.0,
+                top_right: radius,
+                bottom_right: radius,
+                bottom_left: 0.0,
+            };
+        }
 
         // Scrim
         renderer.fill_quad(

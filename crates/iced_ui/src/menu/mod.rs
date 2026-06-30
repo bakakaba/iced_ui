@@ -29,7 +29,7 @@ pub use style::{Catalog, Style, StyleFn, default};
 pub use trigger::MenuButton;
 
 use crate::button::{self, Button, Variant};
-use crate::{FontSizeBase, PaddingSource, RoundnessBase, SpacingBase};
+use crate::{FontSizeBase, PaddingSource, Roundness, RoundnessBase, SpacingBase};
 
 use item::collect_shortcuts;
 use overlay::{MenuOverlay, Metrics};
@@ -93,6 +93,7 @@ where
     padding: PaddingSource,
     text_size: Option<Pixels>,
     font: Option<Font>,
+    roundness: Option<Roundness>,
     class: <Theme as Catalog>::Class<'a>,
 }
 
@@ -117,6 +118,7 @@ where
             padding: PaddingSource::from(crate::Space::sx(1.0)),
             text_size: None,
             font: None,
+            roundness: None,
             class: <Theme as Catalog>::default(),
         }
     }
@@ -171,6 +173,15 @@ where
     /// Sets the font used for menu items in dropdowns.
     pub fn font(mut self, font: impl Into<Font>) -> Self {
         self.font = Some(font.into());
+        self
+    }
+
+    /// Overrides the corner roundness of the dropdown menu container,
+    /// bypassing the theme's default for this widget. Accepts a
+    /// [`Roundness`] token: [`Roundness::sx`] scales the theme's
+    /// roundness base, [`Roundness::px`] sets an absolute radius.
+    pub fn roundness(mut self, roundness: Roundness) -> Self {
+        self.roundness = Some(roundness);
         self
     }
 }
@@ -518,6 +529,7 @@ where
             metrics,
             font,
             style_fn: &self.class,
+            roundness: self.roundness,
             _renderer: std::marker::PhantomData,
         };
 

@@ -65,7 +65,7 @@ use iced::alignment;
 use iced::mouse;
 use iced::{Element, Event, Length, Pixels, Point, Rectangle, Size};
 
-use crate::{RoundnessBase, SpacingBase};
+use crate::{Roundness, RoundnessBase, SpacingBase};
 
 /// Default edge length of the checkbox box, in logical pixels (MD3
 /// spec uses an 18px target with a larger touch area).
@@ -230,6 +230,7 @@ where
     size: f32,
     enabled: bool,
     cycle_indeterminate: bool,
+    roundness: Option<Roundness>,
     class: Theme::Class<'a>,
 }
 
@@ -255,6 +256,7 @@ where
             size: DEFAULT_BOX_SIZE,
             enabled: true,
             cycle_indeterminate: false,
+            roundness: None,
             class: Theme::default(),
         }
     }
@@ -297,6 +299,15 @@ where
     /// Sets the style class.
     pub fn style(mut self, class: impl Into<Theme::Class<'a>>) -> Self {
         self.class = class.into();
+        self
+    }
+
+    /// Overrides the corner roundness of the checkbox box, bypassing
+    /// the theme's default for this widget. Accepts a [`Roundness`]
+    /// token: [`Roundness::sx`] scales the theme's roundness base,
+    /// [`Roundness::px`] sets an absolute radius.
+    pub fn roundness(mut self, roundness: Roundness) -> Self {
+        self.roundness = Some(roundness);
         self
     }
 
@@ -433,6 +444,12 @@ where
         let state = self.value.state();
         let checkbox_style = Catalog::style(theme, &self.class, state, status);
 
+        // Apply the roundness override if set.
+        let mut box_border = checkbox_style.border;
+        if let Some(r) = self.roundness {
+            box_border.radius = r.resolve(RoundnessBase::roundness(theme)).into();
+        }
+
         // The box is vertically centered within the widget bounds.
         let box_y = bounds.y + (bounds.height - box_size) / 2.0;
         let box_bounds = Rectangle {
@@ -445,7 +462,7 @@ where
         renderer.fill_quad(
             renderer::Quad {
                 bounds: box_bounds,
-                border: checkbox_style.border,
+                border: box_border,
                 ..renderer::Quad::default()
             },
             checkbox_style

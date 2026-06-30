@@ -27,7 +27,7 @@ use iced::mouse;
 use iced::{Element, Event, Length, Padding, Rectangle, Size};
 
 use crate::card::Card;
-use crate::theme::SpacingBase;
+use crate::theme::{RoundnessBase, SpacingBase};
 
 /// Device mode presets controlling the default aspect ratio.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -73,7 +73,7 @@ impl Mode {
 #[must_use]
 pub struct Screen<'a, Message, Theme = crate::Theme, Renderer = iced::Renderer>
 where
-    Theme: crate::card::Catalog + SpacingBase,
+    Theme: crate::card::Catalog + SpacingBase + RoundnessBase,
     Renderer: iced::advanced::Renderer
         + iced::advanced::image::Renderer<Handle = iced::advanced::image::Handle>
         + advanced_svg::Renderer,
@@ -86,7 +86,7 @@ where
 impl<'a, Message, Theme, Renderer> Screen<'a, Message, Theme, Renderer>
 where
     Message: 'a,
-    Theme: crate::card::Catalog + SpacingBase + 'a,
+    Theme: crate::card::Catalog + SpacingBase + RoundnessBase + 'a,
     Renderer: iced::advanced::Renderer
         + iced::advanced::image::Renderer<Handle = iced::advanced::image::Handle>
         + advanced_svg::Renderer
@@ -95,7 +95,9 @@ where
     /// Create a new [`Screen`] with the given content in [`Mode::Desktop`].
     pub fn new(content: impl Into<Element<'a, Message, Theme, Renderer>>) -> Self {
         let mode = Mode::Desktop;
-        let card = Card::new(content).padding(Padding::ZERO).roundness(0);
+        let card = Card::new(content)
+            .padding(Padding::ZERO)
+            .roundness(crate::Roundness::px(0.0));
         Self {
             card,
             aspect: mode.default_aspect(),
@@ -148,7 +150,7 @@ impl<'a, Message, Theme, Renderer> Widget<Message, Theme, Renderer>
     for Screen<'a, Message, Theme, Renderer>
 where
     Message: 'a,
-    Theme: crate::card::Catalog + SpacingBase + 'a,
+    Theme: crate::card::Catalog + SpacingBase + RoundnessBase + 'a,
     Renderer: iced::advanced::Renderer
         + iced::advanced::image::Renderer<Handle = iced::advanced::image::Handle>
         + advanced_svg::Renderer
@@ -272,7 +274,7 @@ impl<'a, Message, Theme, Renderer> From<Screen<'a, Message, Theme, Renderer>>
     for Element<'a, Message, Theme, Renderer>
 where
     Message: 'a,
-    Theme: crate::card::Catalog + SpacingBase + 'a,
+    Theme: crate::card::Catalog + SpacingBase + RoundnessBase + 'a,
     Renderer: iced::advanced::Renderer
         + iced::advanced::image::Renderer<Handle = iced::advanced::image::Handle>
         + advanced_svg::Renderer

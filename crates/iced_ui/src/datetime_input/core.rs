@@ -541,6 +541,7 @@ pub(crate) struct Picker<'a, Message> {
     minute_step: u32,
     width: Length,
     variant: Variant,
+    roundness: Option<crate::Roundness>,
     class: StyleFn<'a, Theme>,
 }
 
@@ -556,6 +557,7 @@ impl<'a, Message> Picker<'a, Message> {
             minute_step: 1,
             width: Length::Fixed(mode.default_width()),
             variant: Variant::default(),
+            roundness: None,
             class: Box::new(style::default),
         }
     }
@@ -607,6 +609,11 @@ impl<'a, Message> Picker<'a, Message> {
 
     pub(crate) fn variant(mut self, variant: Variant) -> Self {
         self.variant = variant;
+        self
+    }
+
+    pub(crate) fn roundness(mut self, roundness: crate::Roundness) -> Self {
+        self.roundness = Some(roundness);
         self
     }
 
@@ -936,7 +943,10 @@ where
             .is_focused();
 
         let palette = theme.extended_palette();
-        let roundness = theme.radius(crate::Roundness::sx(1.0));
+        let roundness = match self.roundness {
+            Some(r) => theme.radius(r),
+            None => theme.radius(crate::Roundness::sx(1.0)),
+        };
 
         // Compute outer container style
         let (bg, border_color, border_width) = if !state.is_valid {

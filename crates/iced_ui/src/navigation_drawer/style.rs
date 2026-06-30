@@ -53,7 +53,7 @@ impl Catalog for Theme {
 /// The default navigation drawer style.
 pub fn default(theme: &Theme) -> Style {
     let palette = theme.extended_palette();
-    let radius = theme.radius(Roundness::sx(4.0));
+    let radius = theme.radius(Roundness::sx(2.0));
 
     Style {
         background: Background::Color(palette.background.base.color),

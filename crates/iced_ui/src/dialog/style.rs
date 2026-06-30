@@ -51,7 +51,7 @@ impl Catalog for Theme {
 /// The default dialog style.
 pub fn default(theme: &Theme) -> Style {
     let palette = theme.extended_palette();
-    let radius = theme.radius(Roundness::sx(7.0));
+    let radius = theme.radius(Roundness::sx(2.0));
 
     Style {
         scrim_color: Color::from_rgba(0.0, 0.0, 0.0, 0.32),

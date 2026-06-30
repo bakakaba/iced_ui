@@ -23,7 +23,7 @@ use iced::advanced::{Clipboard, Shell};
 use iced::mouse;
 use iced::{Border, Element, Event, Length, Rectangle, Size};
 
-use crate::{RoundnessBase, SpacingBase};
+use crate::{Roundness, RoundnessBase, SpacingBase};
 
 /// Height of the segmented button in logical pixels (MD3 spec).
 const SEGMENT_HEIGHT: f32 = 40.0;
@@ -99,6 +99,7 @@ where
 {
     entries: Vec<Entry<'a, Message, Theme, Renderer>>,
     on_press: Option<Box<dyn Fn(usize) -> Message + 'a>>,
+    roundness: Option<Roundness>,
     class: Theme::Class<'a>,
 }
 
@@ -122,6 +123,7 @@ where
         Self {
             entries: Vec::new(),
             on_press: None,
+            roundness: None,
             class: Theme::default(),
         }
     }
@@ -142,6 +144,15 @@ where
     /// Sets the style class.
     pub fn style(mut self, class: impl Into<Theme::Class<'a>>) -> Self {
         self.class = class.into();
+        self
+    }
+
+    /// Overrides the corner roundness of the group's outer corners,
+    /// bypassing the theme's default for this widget. Accepts a
+    /// [`Roundness`] token: [`Roundness::sx`] scales the theme's
+    /// roundness base, [`Roundness::px`] sets an absolute radius.
+    pub fn roundness(mut self, roundness: Roundness) -> Self {
+        self.roundness = Some(roundness);
         self
     }
 
@@ -311,12 +322,19 @@ where
             let seg_style = Catalog::style(theme, &self.class, entry.selected, status);
 
             // Use the radius from the style, then zero-out corners based
-            // on position within the group.
+            // on position within the group. A `.roundness(..)` override
+            // replaces the uniform radius.
             let r = seg_style.border.radius;
-            let base_r = r.top_left; // uniform radius from style fn
+            let base_r = match self.roundness {
+                Some(roundness) => roundness.resolve(RoundnessBase::roundness(theme)),
+                None => r.top_left, // uniform radius from style fn
+            };
 
             let border = if seg_count == 1 {
-                seg_style.border
+                Border {
+                    radius: base_r.into(),
+                    ..seg_style.border
+                }
             } else if i == 0 {
                 // First: rounded left, square right.
                 Border {

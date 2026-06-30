@@ -26,7 +26,7 @@ use iced::keyboard;
 use iced::mouse;
 use iced::{Background, Border, Color, Element, Event, Length, Point, Rectangle, Size, Vector};
 
-use crate::{FontSizeBase, RoundnessBase, SpacingBase};
+use crate::{FontSizeBase, Roundness, RoundnessBase, SpacingBase};
 
 // -- HSV color model --
 
@@ -249,6 +249,7 @@ where
     color: Color,
     on_change: Option<Box<dyn Fn(Color) -> Message + 'a>>,
     trigger_size: f32,
+    roundness: Option<Roundness>,
     class: Theme::Class<'a>,
     _renderer: std::marker::PhantomData<Renderer>,
 }
@@ -264,6 +265,7 @@ where
             color,
             on_change: None,
             trigger_size: DEFAULT_TRIGGER_SIZE,
+            roundness: None,
             class: Theme::default(),
             _renderer: std::marker::PhantomData,
         }
@@ -284,6 +286,15 @@ where
     /// Sets the style class.
     pub fn style(mut self, class: impl Into<Theme::Class<'a>>) -> Self {
         self.class = class.into();
+        self
+    }
+
+    /// Overrides the corner roundness of the trigger swatch and popup,
+    /// bypassing the theme's default for this widget. Accepts a
+    /// [`Roundness`] token: [`Roundness::sx`] scales the theme's
+    /// roundness base, [`Roundness::px`] sets an absolute radius.
+    pub fn roundness(mut self, roundness: Roundness) -> Self {
+        self.roundness = Some(roundness);
         self
     }
 }
@@ -363,8 +374,13 @@ where
         } else {
             Status::Idle
         };
-        let style = theme.style(&self.class, status);
+        let mut style = theme.style(&self.class, status);
         let bounds = layout.bounds();
+
+        // Apply the roundness override to the trigger swatch if set.
+        if let Some(r) = self.roundness {
+            style.trigger_border.radius = r.resolve(RoundnessBase::roundness(theme)).into();
+        }
 
         // Color fill (use live internal color when popup is open).
         let display_color = if state.open {
@@ -415,6 +431,7 @@ where
         Some(overlay::Element::new(Box::new(ColorPickerOverlay {
             on_change: &self.on_change,
             class: &self.class,
+            roundness: self.roundness,
             state,
             trigger_bounds,
             _renderer: std::marker::PhantomData,
@@ -427,6 +444,7 @@ where
 struct ColorPickerOverlay<'a, 'b, Message, Theme: Catalog, Renderer: renderer::Renderer> {
     on_change: &'b Option<Box<dyn Fn(Color) -> Message + 'a>>,
     class: &'b Theme::Class<'a>,
+    roundness: Option<Roundness>,
     state: &'b mut State,
     trigger_bounds: Rectangle,
     _renderer: std::marker::PhantomData<Renderer>,
@@ -621,8 +639,15 @@ where
     ) {
         let _ = cursor;
         let status = Status::Open;
-        let style = theme.style(self.class, status);
+        let mut style = theme.style(self.class, status);
         let bounds = layout.bounds();
+
+        // Apply the roundness override to the popup and hue bar if set.
+        if let Some(r) = self.roundness {
+            let radius = r.resolve(RoundnessBase::roundness(theme));
+            style.popup_border.radius = radius.into();
+            style.bar_border.radius = radius.into();
+        }
 
         // Popup background
         if let Some(bg) = style.popup_background {

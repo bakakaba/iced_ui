@@ -25,7 +25,7 @@ use iced::{
 
 pub use style::{Catalog, Style, StyleFn, Variant, default, elevated, flat};
 
-use crate::{PaddingSource, SpacingBase};
+use crate::{PaddingSource, Roundness, RoundnessBase, SpacingBase};
 
 /// A background image for a [`Card`], either raster or vector.
 #[derive(Debug, Clone)]
@@ -125,7 +125,7 @@ where
     background: Option<Background>,
     background_image: Option<BackgroundImage>,
     image_fit: ContentFit,
-    roundness_override: Option<f32>,
+    roundness_override: Option<Roundness>,
     class: <Theme as Catalog>::Class<'a>,
     _renderer: PhantomData<Renderer>,
 }
@@ -228,11 +228,13 @@ where
         self
     }
 
-    /// Overrides the corner roundness of the [`Card`] in logical
-    /// pixels, bypassing the theme's roundness setting. Set to `0` for
-    /// sharp corners.
-    pub fn roundness(mut self, roundness: impl Into<Pixels>) -> Self {
-        self.roundness_override = Some(roundness.into().0);
+    /// Overrides the corner roundness of the [`Card`], bypassing the
+    /// theme's default for this widget. Accepts a [`Roundness`] token:
+    /// use [`Roundness::sx`] to scale the theme's roundness base or
+    /// [`Roundness::px`] for an absolute value (e.g.
+    /// `Roundness::px(0.0)` for sharp corners).
+    pub fn roundness(mut self, roundness: Roundness) -> Self {
+        self.roundness_override = Some(roundness);
         self
     }
 
@@ -269,7 +271,7 @@ where
 impl<'a, Message, Theme, Renderer> Widget<Message, Theme, Renderer>
     for Card<'a, Message, Theme, Renderer>
 where
-    Theme: Catalog + SpacingBase,
+    Theme: Catalog + SpacingBase + RoundnessBase,
     Renderer: renderer::Renderer
         + advanced_image::Renderer<Handle = advanced_image::Handle>
         + advanced_svg::Renderer,
@@ -413,7 +415,7 @@ where
 
         // Apply the roundness override if set.
         if let Some(r) = self.roundness_override {
-            style.border.radius = r.into();
+            style.border.radius = r.resolve(RoundnessBase::roundness(theme)).into();
         }
 
         // Refresh the padding cache against the active theme so the
@@ -631,7 +633,7 @@ impl<'a, Message, Theme, Renderer> From<Card<'a, Message, Theme, Renderer>>
     for Element<'a, Message, Theme, Renderer>
 where
     Message: 'a,
-    Theme: Catalog + SpacingBase + 'a,
+    Theme: Catalog + SpacingBase + RoundnessBase + 'a,
     Renderer: renderer::Renderer
         + advanced_image::Renderer<Handle = advanced_image::Handle>
         + advanced_svg::Renderer
