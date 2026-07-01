@@ -54,6 +54,7 @@ pub mod tabs;
 pub mod text;
 pub mod text_input;
 pub mod theme;
+pub mod tooltip;
 pub mod top_app_bar;
 pub mod tree;
 
@@ -93,4 +94,5 @@ pub use theme::{
     Elevation, ElevationBase, FontSize, FontSizeBase, Information, PaddingSource, Paper, Roundness,
     RoundnessBase, ShadowDir, Space, SpacingBase, Theme,
 };
+pub use tooltip::Tooltip;
 pub use top_app_bar::TopAppBar;

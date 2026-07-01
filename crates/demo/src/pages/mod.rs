@@ -23,6 +23,7 @@ mod slide_sheet;
 mod snackbar;
 mod tabs;
 mod text;
+mod tooltip;
 mod top_app_bar;
 mod tree;
 
@@ -165,6 +166,7 @@ pages! {
         Snackbar(snackbar::SnackbarPage),
         Tabs(tabs::TabsPage),
         Text(text::TextPage),
+        Tooltip(tooltip::TooltipPage),
         TopAppBar(top_app_bar::TopAppBarPage),
         Tree(tree::TreePage),
     }
