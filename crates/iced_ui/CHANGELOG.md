@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.1.9](https://github.com/bakakaba/iced_ui/compare/v0.1.8...v0.1.9) (2026-07-01)
+
+
+### Features
+
+* add checkbox widget ([032cbd0](https://github.com/bakakaba/iced_ui/commit/032cbd0f536028f9e3f939ef363b86fc5a2a6804))
+* add loading indicator widgets ([41a381d](https://github.com/bakakaba/iced_ui/commit/41a381d123cabadbbd0622d89279938615b9f66e))
+* add readonly and cycleble variants for the checkbox widget ([8479a32](https://github.com/bakakaba/iced_ui/commit/8479a322cf937c0d7fb59c3cdad269e396e7f1e8))
+* add tooltip widget ([561dbe0](https://github.com/bakakaba/iced_ui/commit/561dbe035bb43b29781d9cfefaec9f9e64d7a5c0))
+* add tree widget ([9ec68db](https://github.com/bakakaba/iced_ui/commit/9ec68dbb2afb87ad19a29e11cd63e3369eecbb33))
+* ready chip widget ([fa89074](https://github.com/bakakaba/iced_ui/commit/fa89074cc3e9848ffa45217287a699b5253e35a7))
+
+
+### Bug Fixes
+
+* fix consistency of roundness overrride for widgets ([2f5c766](https://github.com/bakakaba/iced_ui/commit/2f5c766efe579a7264a9d91713791a353cd348b1))
+* fix dialog to allow widget composition ([0249c9e](https://github.com/bakakaba/iced_ui/commit/0249c9ea972140e56654b5ccbcf54f1531dfe78f))
+
 ## [0.1.8](https://github.com/bakakaba/iced_ui/compare/v0.1.7...v0.1.8) (2026-06-12)
 
 
