@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.10](https://github.com/bakakaba/iced_ui/compare/v0.1.9...v0.1.10) (2026-09-30)
+
+
+### Bug Fixes
+
+* fix missing documentation link for published package ([29dfa12](https://github.com/bakakaba/iced_ui/commit/29dfa12478de9db32a06b3f004b4e4e2baf3f030))
+
 ## [0.1.9](https://github.com/bakakaba/iced_ui/compare/v0.1.8...v0.1.9) (2026-07-01)
 
 
